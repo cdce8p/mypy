@@ -119,6 +119,34 @@ type_aliases: Final = {
     'typing.DefaultDict': 'collections.defaultdict',
     'typing.Deque': 'collections.deque',
     'typing.OrderedDict': 'collections.OrderedDict',
+
+    'typing.AbstractSet': 'collections.abc.Set',
+    'typing.AsyncGenerator': 'collections.abc.AsyncGenerator',
+    'typing.AsyncIterable': 'collections.abc.AsyncIterable',
+    'typing.AsyncIterator': 'collections.abc.AsyncIterator',
+    'typing.Awaitable': 'collections.abc.Awaitable',
+    'typing.Collection': 'collections.abc.Collection',
+    'typing.Container': 'collections.abc.Container',
+    'typing.Coroutine': 'collections.abc.Coroutine',
+    'typing.Generator': 'collections.abc.Generator',
+    'typing.ItemsView': 'collections.abc.ItemsView',
+    'typing.Iterable': 'collections.abc.Iterable',
+    'typing.Iterator': 'collections.abc.Iterator',
+    'typing.KeysView': 'collections.abc.KeysView',
+    'typing.Mapping': 'collections.abc.Mapping',
+    'typing.MappingView': 'collections.abc.MappingView',
+    'typing.MutableMapping': 'collections.abc.MutableMapping',
+    'typing.MutableSequence': 'collections.abc.MutableSequence',
+    'typing.MutableSet': 'collections.abc.MutableSet',
+    'typing.Reversible': 'collections.abc.Reversible',
+    'typing.Sequence': '_collections_abc.Sequence',
+    'typing.ValuesView': 'collections.abc.ValuesView',
+
+    'typing.ByteString': 'collections.abc.ByteString',
+    'typing.Hashable': 'collections.abc.Hashable',
+    'typing.Sized': 'collections.abc.Sized',
+
+    'typing.Callable': 'collections.abc.Callable',
 }
 
 # This keeps track of the oldest supported Python version where the corresponding
@@ -133,6 +161,34 @@ type_aliases_source_versions: Final = {
     'typing.DefaultDict': (2, 7),
     'typing.Deque': (2, 7),
     'typing.OrderedDict': (3, 7),
+
+    'typing.AbstractSet': (3, 3),
+    'typing.AsyncGenerator': (3, 6),
+    'typing.AsyncIterable': (3, 5),
+    'typing.AsyncIterator': (3, 5),
+    'typing.Awaitable': (3, 5),
+    'typing.Collection': (3, 6),
+    'typing.Container': (3, 3),
+    'typing.Coroutine': (3, 5),
+    'typing.Generator': (3, 5),
+    'typing.ItemsView': (3, 3),
+    'typing.Iterable': (3, 3),
+    'typing.Iterator': (3, 3),
+    'typing.KeysView': (3, 3),
+    'typing.Mapping': (3, 3),
+    'typing.MappingView': (3, 3),
+    'typing.MutableMapping': (3, 3),
+    'typing.MutableSequence': (3, 3),
+    'typing.MutableSet': (3, 3),
+    'typing.Reversible': (3, 6),
+    'typing.Sequence': (3, 3),
+    'typing.ValuesView': (3, 3),
+
+    'typing.ByteString': (3, 5),
+    'typing.Hashable': (3, 3),
+    'typing.Sized': (3, 3),
+
+    'typing.Callable': (3, 3),
 }
 
 reverse_builtin_aliases: Final = {
