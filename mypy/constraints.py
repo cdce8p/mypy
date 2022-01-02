@@ -272,7 +272,13 @@ def any_constraints(options: List[Optional[List[Constraint]]], eager: bool) -> L
             return any_constraints([option for option in merged_options], eager)
     # Otherwise, there are either no valid options or multiple, inconsistent valid
     # options. Give up and deduce nothing.
-    return []
+    selected_option: list[Constraint] = []
+    for option in valid_options:
+        if len(option) > len(selected_option):
+            selected_option = option
+    return selected_option
+
+    # return []
 
 
 def is_same_constraints(x: List[Constraint], y: List[Constraint]) -> bool:
