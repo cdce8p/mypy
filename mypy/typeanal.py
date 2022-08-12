@@ -1854,6 +1854,7 @@ def fix_instance(
     note: MsgCallback,
     disallow_any: bool,
     options: Options,
+    # tv_scope: TypeVarLikeScope,
     use_generic_error: bool = False,
     unexpanded_type: Type | None = None,
 ) -> None:

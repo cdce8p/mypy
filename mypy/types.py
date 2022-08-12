@@ -515,13 +515,14 @@ class TypeVarId:
         return TypeVarId(raw_id, meta_level)
 
     def __repr__(self) -> str:
+        # return f"TypeVarId({self.raw_id}, {self.meta_level}, {self.namespace})"
         return self.raw_id.__repr__()
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, TypeVarId)
             and self.raw_id == other.raw_id
-            and self.meta_level == other.meta_level
+            # and self.meta_level == other.meta_level  # TODO this probably breaks a lot of stuff
             and self.namespace == other.namespace
         )
 
@@ -529,7 +530,13 @@ class TypeVarId:
         return not (self == other)
 
     def __hash__(self) -> int:
-        return hash((self.raw_id, self.meta_level, self.namespace))
+        return hash(
+            (
+                self.raw_id,
+                # self.meta_level,
+                self.namespace,
+            )
+        )
 
     def is_meta_var(self) -> bool:
         return self.meta_level > 0
@@ -576,6 +583,8 @@ class TypeVarLikeType(ProperType):
     @classmethod
     def new_unification_variable(cls, old: Self) -> Self:
         new_id = TypeVarId.new(meta_level=1)
+        new_id.raw_id = old.id.raw_id
+        new_id.namespace = old.id.namespace
         return old.copy_modified(id=new_id)
 
     def has_default(self) -> bool:
@@ -3491,6 +3500,18 @@ class HasTypeVars(BoolTypeQuery):
 def has_type_vars(typ: Type) -> bool:
     """Check if a type contains any type variables (recursively)."""
     return typ.accept(HasTypeVars())
+
+
+class HasParamSpecs(TypeQuery[bool]):
+    def __init__(self) -> None:
+        super().__init__(any)
+
+    def visit_param_spec(self, t: ParamSpecType) -> bool:
+        return True
+
+
+def has_param_specs(typ: Type) -> bool:
+    return typ.accept(HasParamSpecs())
 
 
 class HasRecursiveType(BoolTypeQuery):
