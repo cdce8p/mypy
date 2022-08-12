@@ -10,10 +10,12 @@ from mypy.types import (
     ParamSpecType,
     PartialType,
     Type,
+    TypeOfAny,
     TypeVarId,
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
+    UninhabitedType,
     get_proper_type,
 )
 
@@ -96,6 +98,8 @@ def apply_generic_arguments(
         target_type = get_target_type(
             tvar, type, callable, report_incompatible_typevar_value, context, skip_unsatisfied
         )
+        if isinstance(target_type, UninhabitedType) and not (isinstance(tvar.default, AnyType) and tvar.default.type_of_any == TypeOfAny.from_omitted_generics):
+            target_type = tvar.default
         if target_type is not None:
             id_to_type[tvar.id] = target_type
 

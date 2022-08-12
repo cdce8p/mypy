@@ -33,6 +33,7 @@ def fill_typevars(typ: TypeInfo) -> Union[Instance, TupleType]:
                 tv.id,
                 tv.values,
                 tv.upper_bound,
+                tv.default,
                 tv.variance,
                 line=-1,
                 column=-1,

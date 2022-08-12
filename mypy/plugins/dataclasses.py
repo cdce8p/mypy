@@ -219,7 +219,7 @@ class DataclassTransformer:
                 # the self type.
                 obj_type = ctx.api.named_type("builtins.object")
                 order_tvar_def = TypeVarType(
-                    SELF_TVAR_NAME, info.fullname + "." + SELF_TVAR_NAME, -1, [], obj_type
+                    SELF_TVAR_NAME, info.fullname + "." + SELF_TVAR_NAME, -1, [], obj_type, AnyType(TypeOfAny.from_omitted_generics)
                 )
                 order_return_type = ctx.api.named_type("builtins.bool")
                 order_args = [

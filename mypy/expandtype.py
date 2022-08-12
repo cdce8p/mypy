@@ -134,6 +134,7 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
     def visit_instance(self, t: Instance) -> Type:
         args = self.expand_types_with_unpack(list(t.args))
         if isinstance(args, list):
+            args_with_defaults = []
             return Instance(t.type, args, t.line, t.column)
         else:
             return args

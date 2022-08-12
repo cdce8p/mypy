@@ -291,6 +291,7 @@ class TypeAnalyser(SyntheticTypeVisitor[Type], TypeAnalyzerPluginInterface):
                     tvar_def.id,
                     tvar_def.flavor,
                     tvar_def.upper_bound,
+                    tvar_def.default,
                     line=t.line,
                     column=t.column,
                 )
@@ -312,6 +313,7 @@ class TypeAnalyser(SyntheticTypeVisitor[Type], TypeAnalyzerPluginInterface):
                     tvar_def.id,
                     tvar_def.values,
                     tvar_def.upper_bound,
+                    tvar_def.default,
                     tvar_def.variance,
                     line=t.line,
                     column=t.column,
@@ -1356,6 +1358,7 @@ class TypeAnalyser(SyntheticTypeVisitor[Type], TypeAnalyzerPluginInterface):
                 var_def.id.raw_id,
                 self.anal_array(var_def.values),
                 var_def.upper_bound.accept(self),
+                var_def.default.accept(self),
                 var_def.variance,
                 var_def.line,
             )

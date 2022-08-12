@@ -1,6 +1,5 @@
 import collections  # Needed by aliases like DefaultDict, see mypy issue 2986
 import sys
-from _typeshed import IdentityFunction, Incomplete, ReadableBuffer, Self as TypeshedSelf, SupportsKeysAndGetItem
 from abc import ABCMeta, abstractmethod
 from types import (
     BuiltinFunctionType,
@@ -15,6 +14,14 @@ from types import (
     WrapperDescriptorType,
 )
 from typing_extensions import Literal as _Literal, ParamSpec as _ParamSpec, final as _final
+
+from _typeshed import (
+    IdentityFunction,
+    Incomplete,
+    ReadableBuffer,
+    Self as TypeshedSelf,
+    SupportsKeysAndGetItem,
+)
 
 if sys.version_info >= (3, 9):
     from types import GenericAlias
@@ -211,7 +218,7 @@ if sys.version_info >= (3, 10):
         __bound__: Any | None
         __covariant__: bool
         __contravariant__: bool
-        def __init__(self, name: str, *, bound: Any | None = ..., contravariant: bool = ..., covariant: bool = ...) -> None: ...
+        def __init__(self, name: str, *, bound: Any | None = ..., default: Any = ..., contravariant: bool = ..., covariant: bool = ...) -> None: ...
         @property
         def args(self) -> ParamSpecArgs: ...
         @property

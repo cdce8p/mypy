@@ -3542,7 +3542,7 @@ class SemanticAnalyzer(
         )
         if res is None:
             return False
-        variance, upper_bound = res
+        variance, upper_bound, default = res
 
         existing = self.current_symbol_table().get(name)
         if existing and not (
@@ -3577,7 +3577,7 @@ class SemanticAnalyzer(
 
         # Yes, it's a valid type variable definition! Add it to the symbol table.
         if not call.analyzed:
-            type_var = TypeVarExpr(name, self.qualified_name(name), values, upper_bound, variance)
+            type_var = TypeVarExpr(name, self.qualified_name(name), values, upper_bound, default, variance)
             type_var.line = call.line
             call.analyzed = type_var
         else:
@@ -3585,6 +3585,7 @@ class SemanticAnalyzer(
             if call.analyzed.values != values or call.analyzed.upper_bound != upper_bound:
                 self.progress = True
             call.analyzed.upper_bound = upper_bound
+            call.analyzed.default = upper_bound
             call.analyzed.values = values
 
         self.add_symbol(name, call.analyzed, s)
@@ -3634,11 +3635,12 @@ class SemanticAnalyzer(
         kinds: List[ArgKind],
         num_values: int,
         context: Context,
-    ) -> Optional[Tuple[int, Type]]:
+    ) -> Optional[Tuple[int, Type, Type]]:
         has_values = num_values > 0
         covariant = False
         contravariant = False
         upper_bound: Type = self.object_type()
+        default: Type = AnyType(TypeOfAny.from_omitted_generics)
         for param_value, param_name, param_kind in zip(args, names, kinds):
             if not param_kind.is_named():
                 self.fail(message_registry.TYPEVAR_UNEXPECTED_ARGUMENT, context)
@@ -3661,27 +3663,12 @@ class SemanticAnalyzer(
                 if has_values:
                     self.fail("TypeVar cannot have both values and an upper bound", context)
                     return None
-                try:
-                    # We want to use our custom error message below, so we suppress
-                    # the default error message for invalid types here.
-                    analyzed = self.expr_to_analyzed_type(
-                        param_value, allow_placeholder=True, report_invalid_types=False
-                    )
-                    if analyzed is None:
-                        # Type variables are special: we need to place them in the symbol table
-                        # soon, even if upper bound is not ready yet. Otherwise avoiding
-                        # a "deadlock" in this common pattern would be tricky:
-                        #     T = TypeVar('T', bound=Custom[Any])
-                        #     class Custom(Generic[T]):
-                        #         ...
-                        analyzed = PlaceholderType(None, [], context.line)
-                    upper_bound = get_proper_type(analyzed)
-                    if isinstance(upper_bound, AnyType) and upper_bound.is_from_error:
-                        self.fail(message_registry.TYPEVAR_BOUND_MUST_BE_TYPE, param_value)
-                        # Note: we do not return 'None' here -- we want to continue
-                        # using the AnyType as the upper bound.
-                except TypeTranslationError:
-                    self.fail(message_registry.TYPEVAR_BOUND_MUST_BE_TYPE, param_value)
+                upper_bound = self.get_typevarlike_argument(param_name, param_value, context)
+                if upper_bound is None:
+                    return None
+            elif param_name == "default":
+                default = self.get_typevarlike_argument(param_name,param_value, context)
+                if upper_bound is None:
                     return None
             elif param_name == "values":
                 # Probably using obsolete syntax with values=(...). Explain the current syntax.
@@ -3708,7 +3695,32 @@ class SemanticAnalyzer(
             variance = CONTRAVARIANT
         else:
             variance = INVARIANT
-        return variance, upper_bound
+        return variance, upper_bound, default
+
+    def get_typevarlike_argument(self, param_name: str, param_value: Expression, context: Context) -> Optional[ProperType]:
+        try:
+            # We want to use our custom error message below, so we suppress
+            # the default error message for invalid types here.
+            analyzed = self.expr_to_analyzed_type(
+                param_value, allow_placeholder=True, report_invalid_types=False
+            )
+            if analyzed is None:
+                # Type variables are special: we need to place them in the symbol table
+                # soon, even if upper bound is not ready yet. Otherwise avoiding
+                # a "deadlock" in this common pattern would be tricky:
+                #     T = TypeVar('T', bound=Custom[Any])
+                #     class Custom(Generic[T]):
+                #         ...
+                analyzed = PlaceholderType(None, [], context.line)
+            typ = get_proper_type(analyzed)
+            if isinstance(typ, AnyType) and typ.is_from_error:
+                self.fail(message_registry.TYPEVAR_ARG_MUST_BE_TYPE.format(param_name), param_value)
+                # Note: we do not return 'None' here -- we want to continue
+                # using the AnyType as the upper bound.
+            return typ
+        except TypeTranslationError:
+            self.fail(message_registry.TYPEVAR_ARG_MUST_BE_TYPE.format(param_name), param_value)
+            return None
 
     def extract_typevarlike_name(self, s: AssignmentStmt, call: CallExpr) -> Optional[str]:
         if not call:
@@ -3742,11 +3754,23 @@ class SemanticAnalyzer(
         if name is None:
             return False
 
-        # ParamSpec is different from a regular TypeVar:
-        # arguments are not semantically valid. But, allowed in runtime.
-        # So, we need to warn users about possible invalid usage.
-        if len(call.args) > 1:
+        n_values = call.arg_kinds[1:].count(ARG_POS)
+        default = AnyType(TypeOfAny.from_omitted_generics)
+        for param_value, param_name, param_kind in zip(
+        call.args[1 + n_values:],
+        call.arg_names[1 + n_values:],
+        call.arg_kinds[1 + n_values:],):
+            if param_name == "default":
+                default = self.get_typevarlike_argument(param_name, param_value, s)
+                if default is None:
+                    return False
+                break
+        else:
+            # ParamSpec is different from a regular TypeVar:
+            # arguments are not semantically valid. But, allowed in runtime.
+            # So, we need to warn users about possible invalid usage.
             self.fail("Only the first argument to ParamSpec has defined semantics", s)
+
 
         # PEP 612 reserves the right to define bound, covariant and contravariant arguments to
         # ParamSpec in a later PEP. If and when that happens, we should do something
@@ -3754,7 +3778,7 @@ class SemanticAnalyzer(
 
         if not call.analyzed:
             paramspec_var = ParamSpecExpr(
-                name, self.qualified_name(name), self.object_type(), INVARIANT
+                name, self.qualified_name(name), self.object_type(), default,  INVARIANT
             )
             paramspec_var.line = call.line
             call.analyzed = paramspec_var
@@ -3784,6 +3808,7 @@ class SemanticAnalyzer(
         name = self.extract_typevarlike_name(s, call)
         if name is None:
             return False
+        s
 
         # PEP 646 does not specify the behavior of variance, constraints, or bounds.
         if not call.analyzed:

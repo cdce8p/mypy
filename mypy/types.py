@@ -1,5 +1,6 @@
 """Classes for representing mypy types."""
 
+import inspect
 import sys
 from abc import abstractmethod
 from typing import (
@@ -459,7 +460,7 @@ class TypeVarId:
 
 class TypeVarLikeType(ProperType):
 
-    __slots__ = ("name", "fullname", "id", "upper_bound")
+    __slots__ = ("name", "fullname", "id", "upper_bound", "default")
 
     name: str  # Name (may be qualified)
     fullname: str  # Fully qualified name
@@ -472,6 +473,7 @@ class TypeVarLikeType(ProperType):
         fullname: str,
         id: Union[TypeVarId, int],
         upper_bound: Type,
+        default: Type,
         line: int = -1,
         column: int = -1,
     ) -> None:
@@ -482,6 +484,7 @@ class TypeVarLikeType(ProperType):
             id = TypeVarId(id)
         self.id = id
         self.upper_bound = upper_bound
+        self.default = default
 
     def serialize(self) -> JsonDict:
         raise NotImplementedError
@@ -494,7 +497,7 @@ class TypeVarLikeType(ProperType):
 class TypeVarType(TypeVarLikeType):
     """Type that refers to a type variable."""
 
-    __slots__ = ("values", "variance")
+    __slots__ = ("values", "variance", "stack")
 
     values: List[Type]  # Value restriction, empty list if no restriction
     variance: int
@@ -506,14 +509,16 @@ class TypeVarType(TypeVarLikeType):
         id: Union[TypeVarId, int],
         values: List[Type],
         upper_bound: Type,
+        default: Type,
         variance: int = INVARIANT,
         line: int = -1,
         column: int = -1,
     ) -> None:
-        super().__init__(name, fullname, id, upper_bound, line, column)
+        super().__init__(name, fullname, id, upper_bound, default, line, column)
         assert values is not None, "No restrictions must be represented by empty list"
         self.values = values
         self.variance = variance
+        self.stack = inspect.stack()
 
     @staticmethod
     def new_unification_variable(old: "TypeVarType") -> "TypeVarType":
@@ -524,6 +529,7 @@ class TypeVarType(TypeVarLikeType):
             new_id,
             old.values,
             old.upper_bound,
+            old.default,
             old.variance,
             old.line,
             old.column,
@@ -550,6 +556,7 @@ class TypeVarType(TypeVarLikeType):
             "namespace": self.id.namespace,
             "values": [v.serialize() for v in self.values],
             "upper_bound": self.upper_bound.serialize(),
+            "default": self.default.serialize(),
             "variance": self.variance,
         }
 
@@ -562,6 +569,7 @@ class TypeVarType(TypeVarLikeType):
             TypeVarId(data["id"], namespace=data["namespace"]),
             [deserialize_type(v) for v in data["values"]],
             deserialize_type(data["upper_bound"]),
+            deserialize_type(data["default"]),
             data["variance"],
         )
 
@@ -605,12 +613,13 @@ class ParamSpecType(TypeVarLikeType):
         id: Union[TypeVarId, int],
         flavor: int,
         upper_bound: Type,
+        default: Type,
         *,
         line: int = -1,
         column: int = -1,
         prefix: Optional["Parameters"] = None,
     ) -> None:
-        super().__init__(name, fullname, id, upper_bound, line=line, column=column)
+        super().__init__(name, fullname, id, upper_bound, default, line=line, column=column)
         self.flavor = flavor
         self.prefix = prefix or Parameters([], [], [])
 
@@ -623,6 +632,7 @@ class ParamSpecType(TypeVarLikeType):
             new_id,
             old.flavor,
             old.upper_bound,
+            old.default,
             line=old.line,
             column=old.column,
             prefix=old.prefix,
@@ -635,6 +645,7 @@ class ParamSpecType(TypeVarLikeType):
             self.id,
             flavor,
             upper_bound=self.upper_bound,
+            default=self.default,
             prefix=self.prefix,
         )
 
@@ -651,6 +662,7 @@ class ParamSpecType(TypeVarLikeType):
             id if id is not _dummy else self.id,
             flavor if flavor is not _dummy else self.flavor,
             self.upper_bound,
+            self.default,
             line=self.line,
             column=self.column,
             prefix=prefix if prefix is not _dummy else self.prefix,
@@ -685,6 +697,7 @@ class ParamSpecType(TypeVarLikeType):
             "id": self.id.raw_id,
             "flavor": self.flavor,
             "upper_bound": self.upper_bound.serialize(),
+            "default": self.default.serialize(),
             "prefix": self.prefix.serialize(),
         }
 
@@ -697,6 +710,7 @@ class ParamSpecType(TypeVarLikeType):
             data["id"],
             data["flavor"],
             deserialize_type(data["upper_bound"]),
+            deserialize_type(data["default"]),
             prefix=Parameters.deserialize(data["prefix"]),
         )
 
@@ -721,7 +735,11 @@ class TypeVarTupleType(TypeVarLikeType):
     def deserialize(cls, data: JsonDict) -> "TypeVarTupleType":
         assert data[".class"] == "TypeVarTupleType"
         return TypeVarTupleType(
-            data["name"], data["fullname"], data["id"], deserialize_type(data["upper_bound"])
+            data["name"],
+            data["fullname"],
+            data["id"],
+            deserialize_type(data["upper_bound"]),
+            deserialize_type(data["default"]),
         )
 
     def accept(self, visitor: "TypeVisitor[T]") -> T:
@@ -739,7 +757,13 @@ class TypeVarTupleType(TypeVarLikeType):
     def new_unification_variable(old: "TypeVarTupleType") -> "TypeVarTupleType":
         new_id = TypeVarId.new(meta_level=1)
         return TypeVarTupleType(
-            old.name, old.fullname, new_id, old.upper_bound, line=old.line, column=old.column
+            old.name,
+            old.fullname,
+            new_id,
+            old.upper_bound,
+            old.default,
+            line=old.line,
+            column=old.column,
         )
 
 
@@ -1179,7 +1203,7 @@ class Instance(ProperType):
 
     """
 
-    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash")
+    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash", "stack")
 
     def __init__(
         self,
@@ -1194,6 +1218,7 @@ class Instance(ProperType):
         self.type = typ
         self.args = tuple(args)
         self.type_ref: Optional[str] = None
+        self.stack = inspect.stack()
 
         # True if recovered after incorrect number of type arguments error
         self.invalid = False
@@ -1860,6 +1885,7 @@ class CallableType(FunctionLike):
             arg_type.id,
             ParamSpecFlavor.BARE,
             arg_type.upper_bound,
+            arg_type.default,
             prefix=prefix,
         )
 
@@ -2842,6 +2868,8 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             s = f"{t.name}`{t.id}"
         if self.id_mapper and t.upper_bound:
             s += f"(upper_bound={t.upper_bound.accept(self)})"
+        if t.upper_bound:
+            s += f" = {t.default.accept(self)}"
         return s
 
     def visit_param_spec(self, t: ParamSpecType) -> str:
