@@ -493,11 +493,14 @@ class TypeVarLikeType(ProperType):
     def deserialize(cls, data: JsonDict) -> "TypeVarLikeType":
         raise NotImplementedError
 
+    def has_default(self) -> bool:
+        return not (isinstance(self.default, AnyType) and self.default.type_of_any == TypeOfAny.from_omitted_generics)
+
 
 class TypeVarType(TypeVarLikeType):
     """Type that refers to a type variable."""
 
-    __slots__ = ("values", "variance", "stack")
+    __slots__ = ("values", "variance")
 
     values: List[Type]  # Value restriction, empty list if no restriction
     variance: int
@@ -518,7 +521,6 @@ class TypeVarType(TypeVarLikeType):
         assert values is not None, "No restrictions must be represented by empty list"
         self.values = values
         self.variance = variance
-        self.stack = inspect.stack()
 
     @staticmethod
     def new_unification_variable(old: "TypeVarType") -> "TypeVarType":
@@ -1203,7 +1205,7 @@ class Instance(ProperType):
 
     """
 
-    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash", "stack")
+    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash")
 
     def __init__(
         self,
@@ -1218,7 +1220,6 @@ class Instance(ProperType):
         self.type = typ
         self.args = tuple(args)
         self.type_ref: Optional[str] = None
-        self.stack = inspect.stack()
 
         # True if recovered after incorrect number of type arguments error
         self.invalid = False

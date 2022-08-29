@@ -3729,6 +3729,9 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         tp = get_proper_type(tp)
 
         if isinstance(tp, CallableType):
+            if hasattr(ctx, "expr") and isinstance(ctx.expr, NameExpr):  # TODO(PEP696) actual typechecking here
+                type_vars = ctx.expr.node.defn.type_vars
+                args = [arg for arg in args + [tv.default for tv in type_vars[len(args) - len(type_vars):]]]
             if len(tp.variables) != len(args):
                 self.msg.incompatible_type_application(len(tp.variables), len(args), ctx)
                 return AnyType(TypeOfAny.from_error)

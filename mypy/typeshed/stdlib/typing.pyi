@@ -136,11 +136,12 @@ Any = object()
 class TypeVar:
     __name__: str
     __bound__: Any | None
+    __default__: Any
     __constraints__: tuple[Any, ...]
     __covariant__: bool
     __contravariant__: bool
     def __init__(
-        self, name: str, *constraints: Any, bound: Any | None = ..., covariant: bool = ..., contravariant: bool = ...
+        self, name: str, *constraints: Any, bound: Any | None = ..., default: Any  = ..., covariant: bool = ..., contravariant: bool = ...
     ) -> None: ...
     if sys.version_info >= (3, 10):
         def __or__(self, right: Any) -> _SpecialForm: ...

@@ -98,9 +98,14 @@ def apply_generic_arguments(
         target_type = get_target_type(
             tvar, type, callable, report_incompatible_typevar_value, context, skip_unsatisfied
         )
-        if isinstance(target_type, UninhabitedType) and not (isinstance(tvar.default, AnyType) and tvar.default.type_of_any == TypeOfAny.from_omitted_generics):
-            target_type = tvar.default
-        if target_type is not None:
+        if isinstance(target_type, UninhabitedType) and tvar.has_default():
+            if isinstance(tvar.default, TypeVarLikeType):
+                id_to_type[tvar.id] = id_to_type[tvar.default.id]
+            else:
+                id_to_type[tvar.id] = tvar.default
+        elif isinstance(target_type, TypeVarLikeType) and isinstance(target_type.default, TypeVarLikeType):
+            id_to_type[target_type.id] = id_to_type[target_type.default.id]
+        elif target_type is not None:
             id_to_type[tvar.id] = target_type
 
     param_spec = callable.param_spec()

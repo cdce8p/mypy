@@ -273,6 +273,7 @@ from mypy.types import (
     TypeVarLikeType,
     TypeVarType,
     UnboundType,
+    UninhabitedType,
     get_proper_type,
     get_proper_types,
     invalid_recursive_alias,
@@ -1599,6 +1600,12 @@ class SemanticAnalyzer(
             del base_type_exprs[i]
         tvar_defs: List[TypeVarLikeType] = []
         for name, tvar_expr in declared_tvars:
+            if isinstance(tvar_expr.default, UnboundType):
+                # assumption here is that the names cannot be duplicated
+                for fullname, type_var in self.tvar_scope.scope.items():
+                    _, _, default_type_var_name = fullname.rpartition(".")
+                    if tvar_expr.default.name == default_type_var_name:
+                        tvar_expr.default = type_var
             tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
             tvar_defs.append(tvar_def)
         return base_type_exprs, tvar_defs, is_protocol
@@ -1656,10 +1663,13 @@ class SemanticAnalyzer(
             return unbound.name, sym.node
         if sym is None or not isinstance(sym.node, TypeVarExpr):
             return None
-        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
+        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname) and self.tvar_scope.parent and self.tvar_scope.parent.allow_binding(sym.fullname):
             # It's bound by our type variable scope
+            print("is it?")
             return None
         else:
+            if isinstance(sym.node.default, sym.node.__class__):
+                return None
             assert isinstance(sym.node, TypeVarExpr)
             return unbound.name, sym.node
 
@@ -3564,7 +3574,7 @@ class SemanticAnalyzer(
                 prefix = "Upper bound of type variable"
                 self.msg.unimported_type_becomes_any(prefix, upper_bound, s)
 
-        for t in values + [upper_bound]:
+        for t in values + [upper_bound, default]:
             check_for_explicit_any(
                 t, self.options, self.is_typeshed_stub_file, self.msg, context=s
             )
@@ -3580,6 +3590,8 @@ class SemanticAnalyzer(
             type_var = TypeVarExpr(name, self.qualified_name(name), values, upper_bound, default, variance)
             type_var.line = call.line
             call.analyzed = type_var
+            # if isinstance(type_var.default, TypeVarLikeType):
+            self.tvar_scope.bind_new(name, type_var)
         else:
             assert isinstance(call.analyzed, TypeVarExpr)
             if call.analyzed.values != values or call.analyzed.upper_bound != upper_bound:
@@ -3668,7 +3680,7 @@ class SemanticAnalyzer(
                     return None
             elif param_name == "default":
                 default = self.get_typevarlike_argument(param_name,param_value, context)
-                if upper_bound is None:
+                if default is None:
                     return None
             elif param_name == "values":
                 # Probably using obsolete syntax with values=(...). Explain the current syntax.
@@ -4308,11 +4320,11 @@ class SemanticAnalyzer(
 
     def bind_name_expr(self, expr: NameExpr, sym: SymbolTableNode) -> None:
         """Bind name expression to a symbol table node."""
-        if isinstance(sym.node, TypeVarExpr) and self.tvar_scope.get_binding(sym):
-            self.fail(
-                '"{}" is a type variable and only valid in type ' "context".format(expr.name), expr
-            )
-        elif isinstance(sym.node, PlaceholderNode):
+        # if isinstance(sym.node, TypeVarExpr) and self.tvar_scope.get_binding(sym):
+        #     self.fail(
+        #         '"{}" is a type variable and only valid in type ' "context".format(expr.name), expr
+        #     )
+        if isinstance(sym.node, PlaceholderNode):
             self.process_placeholder(expr.name, "name", expr)
         else:
             expr.kind = sym.kind
@@ -5979,7 +5991,7 @@ class SemanticAnalyzer(
             report_invalid_types=report_invalid_types,
         )
         tag = self.track_incomplete_refs()
-        typ = typ.accept(a)
+        typ = typ.accept(a)  # ADD BREAKPOINt
         if self.found_incomplete_ref(tag):
             # Something could not be bound yet.
             return None

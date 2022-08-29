@@ -94,6 +94,8 @@ def freshen_function_type_vars(callee: F) -> F:
             else:
                 assert isinstance(v, ParamSpecType)
                 tv = ParamSpecType.new_unification_variable(v)
+            if isinstance(tv.default, tv.__class__):
+                tv.default = tvmap[tv.default.id]
             tvs.append(tv)
             tvmap[v.id] = tv
         fresh = cast(CallableType, expand_type(callee, tvmap)).copy_modified(variables=tvs)
@@ -141,6 +143,12 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def visit_type_var(self, t: TypeVarType) -> Type:
         repl = self.variables.get(t.id, t)
+        if isinstance(repl, TypeVarType) and repl.has_default():
+            print(f"Expanding type variable {repl} with default")
+            repl = expand_type(repl.default, self.variables)
+            assert isinstance(repl, Instance)
+            print("expanded again", repl)
+
         if isinstance(repl, ProperType) and isinstance(repl, Instance):
             # TODO: do we really need to do this?
             # If I try to remove this special-casing ~40 tests fail on reveal_type().
