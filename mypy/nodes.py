@@ -2317,7 +2317,12 @@ class TypeVarLikeExpr(SymbolNode, Expression):
     variance: int
 
     def __init__(
-        self, name: str, fullname: str, upper_bound: "mypy.types.Type", default: "mypy.types.Type", variance: int = INVARIANT
+        self,
+        name: str,
+        fullname: str,
+        upper_bound: "mypy.types.Type",
+        default: "mypy.types.Type",
+        variance: int = INVARIANT,
     ) -> None:
         super().__init__()
         self._name = name

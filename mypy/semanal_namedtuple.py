@@ -523,7 +523,12 @@ class NamedTupleAnalyzer:
 
         assert info.tuple_type is not None  # Set by update_tuple_type() above.
         tvd = TypeVarType(
-            SELF_TVAR_NAME, info.fullname + "." + SELF_TVAR_NAME, -1, [], info.tuple_type, AnyType(TypeOfAny.from_omitted_generics)
+            SELF_TVAR_NAME,
+            info.fullname + "." + SELF_TVAR_NAME,
+            -1,
+            [],
+            info.tuple_type,
+            AnyType(TypeOfAny.from_omitted_generics),
         )
         selftype = tvd
 
@@ -592,7 +597,11 @@ class NamedTupleAnalyzer:
         )
 
         self_tvar_expr = TypeVarExpr(
-            SELF_TVAR_NAME, info.fullname + "." + SELF_TVAR_NAME, [], info.tuple_type, AnyType(TypeOfAny.from_omitted_generics)
+            SELF_TVAR_NAME,
+            info.fullname + "." + SELF_TVAR_NAME,
+            [],
+            info.tuple_type,
+            AnyType(TypeOfAny.from_omitted_generics),
         )
         info.names[SELF_TVAR_NAME] = SymbolTableNode(MDEF, self_tvar_expr)
         return info

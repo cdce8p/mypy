@@ -1663,7 +1663,12 @@ class SemanticAnalyzer(
             return unbound.name, sym.node
         if sym is None or not isinstance(sym.node, TypeVarExpr):
             return None
-        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname) and self.tvar_scope.parent and self.tvar_scope.parent.allow_binding(sym.fullname):
+        elif (
+            sym.fullname
+            and not self.tvar_scope.allow_binding(sym.fullname)
+            and self.tvar_scope.parent
+            and self.tvar_scope.parent.allow_binding(sym.fullname)
+        ):
             # It's bound by our type variable scope
             print("is it?")
             return None
@@ -3587,10 +3592,11 @@ class SemanticAnalyzer(
 
         # Yes, it's a valid type variable definition! Add it to the symbol table.
         if not call.analyzed:
-            type_var = TypeVarExpr(name, self.qualified_name(name), values, upper_bound, default, variance)
+            type_var = TypeVarExpr(
+                name, self.qualified_name(name), values, upper_bound, default, variance
+            )
             type_var.line = call.line
             call.analyzed = type_var
-            # if isinstance(type_var.default, TypeVarLikeType):
             self.tvar_scope.bind_new(name, type_var)
         else:
             assert isinstance(call.analyzed, TypeVarExpr)
@@ -3679,7 +3685,7 @@ class SemanticAnalyzer(
                 if upper_bound is None:
                     return None
             elif param_name == "default":
-                default = self.get_typevarlike_argument(param_name,param_value, context)
+                default = self.get_typevarlike_argument(param_name, param_value, context)
                 if default is None:
                     return None
             elif param_name == "values":
@@ -3709,12 +3715,20 @@ class SemanticAnalyzer(
             variance = INVARIANT
         return variance, upper_bound, default
 
-    def get_typevarlike_argument(self, param_name: str, param_value: Expression, context: Context) -> Optional[ProperType]:
+    def get_typevarlike_argument(
+        self, param_name: str, param_value: Expression, context: Context
+    ) -> Optional[ProperType]:
         try:
             # We want to use our custom error message below, so we suppress
             # the default error message for invalid types here.
             analyzed = self.expr_to_analyzed_type(
-                param_value, allow_placeholder=True, report_invalid_types=False
+                param_value,
+                allow_placeholder=True,
+                report_invalid_types=False,
+                # tvar_scope=self.tvar_scope,
+                allow_tuple_literal=True,
+                allow_unbound_tvars=True,
+                allow_param_spec_literals=True,
             )
             if analyzed is None:
                 # Type variables are special: we need to place them in the symbol table
@@ -3726,7 +3740,9 @@ class SemanticAnalyzer(
                 analyzed = PlaceholderType(None, [], context.line)
             typ = get_proper_type(analyzed)
             if isinstance(typ, AnyType) and typ.is_from_error:
-                self.fail(message_registry.TYPEVAR_ARG_MUST_BE_TYPE.format(param_name), param_value)
+                self.fail(
+                    message_registry.TYPEVAR_ARG_MUST_BE_TYPE.format(param_name), param_value
+                )
                 # Note: we do not return 'None' here -- we want to continue
                 # using the AnyType as the upper bound.
             return typ
@@ -3769,9 +3785,10 @@ class SemanticAnalyzer(
         n_values = call.arg_kinds[1:].count(ARG_POS)
         default = AnyType(TypeOfAny.from_omitted_generics)
         for param_value, param_name, param_kind in zip(
-        call.args[1 + n_values:],
-        call.arg_names[1 + n_values:],
-        call.arg_kinds[1 + n_values:],):
+            call.args[1 + n_values :],
+            call.arg_names[1 + n_values :],
+            call.arg_kinds[1 + n_values :],
+        ):
             if param_name == "default":
                 default = self.get_typevarlike_argument(param_name, param_value, s)
                 if default is None:
@@ -3783,14 +3800,13 @@ class SemanticAnalyzer(
             # So, we need to warn users about possible invalid usage.
             self.fail("Only the first argument to ParamSpec has defined semantics", s)
 
-
         # PEP 612 reserves the right to define bound, covariant and contravariant arguments to
         # ParamSpec in a later PEP. If and when that happens, we should do something
         # on the lines of process_typevar_parameters
 
         if not call.analyzed:
             paramspec_var = ParamSpecExpr(
-                name, self.qualified_name(name), self.object_type(), default,  INVARIANT
+                name, self.qualified_name(name), self.object_type(), default, INVARIANT
             )
             paramspec_var.line = call.line
             call.analyzed = paramspec_var
@@ -5882,9 +5898,7 @@ class SemanticAnalyzer(
         except Exception as err:
             report_internal_error(err, self.errors.file, node.line, self.errors, self.options)
 
-    def expr_to_analyzed_type(
-        self, expr: Expression, report_invalid_types: bool = True, allow_placeholder: bool = False
-    ) -> Optional[Type]:
+    def expr_to_analyzed_type(self, expr: Expression, **kwargs: Any) -> Optional[Type]:
         if isinstance(expr, CallExpr):
             expr.accept(self)
             internal_name, info = self.named_tuple_analyzer.check_namedtuple(
@@ -5901,9 +5915,7 @@ class SemanticAnalyzer(
             fallback = Instance(info, [])
             return TupleType(info.tuple_type.items, fallback=fallback)
         typ = self.expr_to_unanalyzed_type(expr)
-        return self.anal_type(
-            typ, report_invalid_types=report_invalid_types, allow_placeholder=allow_placeholder
-        )
+        return self.anal_type(typ, **kwargs)
 
     def analyze_type_expr(self, expr: Expression) -> None:
         # There are certain expressions that mypy does not need to semantically analyze,

@@ -2,12 +2,15 @@
 
 import itertools
 from contextlib import contextmanager
+from copy import copy
 from itertools import chain
+from token import OP
 from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, TypeVar
 from typing_extensions import Final, Protocol
 
 from mypy import errorcodes as codes, message_registry, nodes
 from mypy.errorcodes import ErrorCode
+from mypy.expandtype import expand_type
 from mypy.exprtotype import TypeTranslationError, expr_to_unanalyzed_type
 from mypy.messages import MessageBuilder, format_type_bare, quote_type_string
 from mypy.nodes import (
@@ -40,6 +43,7 @@ from mypy.options import Options
 from mypy.plugin import AnalyzeTypeContext, Plugin, TypeAnalyzerPluginInterface
 from mypy.semanal_shared import SemanticAnalyzerCoreInterface, paramspec_args, paramspec_kwargs
 from mypy.tvar_scope import TypeVarLikeScope
+from mypy.type_visitor import TypeVisitor
 from mypy.types import (
     ANNOTATED_TYPE_NAMES,
     FINAL_TYPE_NAMES,
@@ -74,6 +78,7 @@ from mypy.types import (
     TypeOfAny,
     TypeQuery,
     TypeType,
+    TypeVarId,
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
@@ -1464,6 +1469,7 @@ def fix_instance(
     note: MsgCallback,
     disallow_any: bool,
     python_version: Tuple[int, int],
+    # tv_scope: TypeVarLikeScope,
     use_generic_error: bool = False,
     unexpanded_type: Optional[Type] = None,
 ) -> None:
@@ -1471,30 +1477,34 @@ def fix_instance(
 
     Also emit a suitable error if this is not due to implicit Any's.
     """
+
+    def error():
+        n = len(t.type.type_vars)
+        s = f"{n} type arguments"
+        if n == 0:
+            s = "no type arguments"
+        elif n == 1:
+            s = "1 type argument"
+        act = str(len(t.args))
+        if act == "0":
+            act = "none"
+        fail(f'"{t.type.name}" expects {s}, but {act} given', t, code=codes.TYPE_ARG)
+
+    if any(tv.has_default() for tv in t.type.defn.type_vars):
+        fixed = expand_type(t, {tv.id: t for tv, t in zip(t.type.defn.type_vars, t.args)})
+        assert isinstance(fixed, Instance)
+        t.args = fixed.args
+        return
     if len(t.args) == 0:
-        if use_generic_error:
-            fullname: Optional[str] = None
-        else:
-            fullname = t.type.fullname
+        fullname = None if use_generic_error else t.type.fullname
         any_type = get_omitted_any(
             disallow_any, fail, note, t, python_version, fullname, unexpanded_type
         )
+
         t.args = (any_type,) * len(t.type.type_vars)
         return
-    # Invalid number of type parameters.
-    n = len(t.type.type_vars)
-    s = f"{n} type arguments"
-    if n == 0:
-        s = "no type arguments"
-    elif n == 1:
-        s = "1 type argument"
-    act = str(len(t.args))
-    if act == "0":
-        act = "none"
-    fail(f'"{t.type.name}" expects {s}, but {act} given', t, code=codes.TYPE_ARG)
-    # Construct the correct number of type arguments, as
-    # otherwise the type checker may crash as it expects
-    # things to be right.
+
+    error()
     t.args = tuple(AnyType(TypeOfAny.from_error) for _ in t.type.type_vars)
     t.invalid = True
 
@@ -1519,6 +1529,7 @@ def expand_type_alias(
         no_args: whether original definition used a bare generic `A = List`
         ctx: context where expansion happens
     """
+    print("expanding", node.target)
     exp_len = len(node.alias_tvars)
     act_len = len(args)
     if exp_len > 0 and act_len == 0:
@@ -1592,15 +1603,9 @@ def set_any_tvars(
     return TypeAliasType(node, [any_type] * len(node.alias_tvars), newline, newcolumn)
 
 
-def remove_dups(tvars: Iterable[T]) -> List[T]:
+def remove_dups(iterable: Iterable[T]) -> List[T]:
     # Get unique elements in order of appearance
-    all_tvars: Set[T] = set()
-    new_tvars: List[T] = []
-    for t in tvars:
-        if t not in all_tvars:
-            new_tvars.append(t)
-            all_tvars.add(t)
-    return new_tvars
+    return list(dict.fromkeys(iterable))
 
 
 def flatten_tvars(ll: Iterable[List[T]]) -> List[T]:

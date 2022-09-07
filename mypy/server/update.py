@@ -154,6 +154,7 @@ from mypy.server.aststrip import SavedAttributes, strip_target
 from mypy.server.deps import get_dependencies_of_target, merge_dependencies
 from mypy.server.target import trigger_to_target
 from mypy.server.trigger import WILDCARD_TAG, make_trigger
+from mypy.typeanal import remove_dups
 from mypy.typestate import TypeState
 from mypy.util import module_prefix, split_target
 
@@ -233,7 +234,7 @@ class FineGrainedBuildManager:
 
         self.triggered = []
         self.updated_modules = []
-        changed_modules = dedupe_modules(changed_modules + self.stale)
+        changed_modules = remove_dups(changed_modules + self.stale)
         initial_set = {id for id, _ in changed_modules}
         self.manager.log_fine_grained(
             "==== update %s ====" % ", ".join(repr(id) for id, _ in changed_modules)
@@ -248,7 +249,7 @@ class FineGrainedBuildManager:
             # Handle blocking errors first. We'll exit as soon as we find a
             # module that still has blocking errors.
             self.manager.log_fine_grained(f"existing blocker: {self.blocking_error[0]}")
-            changed_modules = dedupe_modules([self.blocking_error] + changed_modules)
+            changed_modules = remove_dups([self.blocking_error] + changed_modules)
             blocking_error = self.blocking_error[0]
             self.blocking_error = None
 
@@ -281,7 +282,7 @@ class FineGrainedBuildManager:
                     self.previous_targets_with_errors,
                     self.processed_targets,
                 )
-                changed_modules = dedupe_modules(changed_modules)
+                changed_modules = remove_dups(changed_modules)
                 if not changed_modules:
                     # Preserve state needed for the next update.
                     self.previous_targets_with_errors = self.manager.errors.targets()
@@ -706,16 +707,6 @@ def delete_module(module_id: str, path: str, graph: Graph, manager: BuildManager
     # we mark it as missing so that it will get picked up by import from still.
     if manager.fscache.isfile(path):
         manager.missing_modules.add(module_id)
-
-
-def dedupe_modules(modules: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-    seen: Set[str] = set()
-    result = []
-    for id, path in modules:
-        if id not in seen:
-            seen.add(id)
-            result.append((id, path))
-    return result
 
 
 def get_module_to_path_map(graph: Graph) -> Dict[str, str]:

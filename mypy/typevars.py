@@ -40,12 +40,21 @@ def fill_typevars(typ: TypeInfo) -> Union[Instance, TupleType]:
             )
         elif isinstance(tv, TypeVarTupleType):
             tv = UnpackType(
-                TypeVarTupleType(tv.name, tv.fullname, tv.id, tv.upper_bound, tv.default, line=-1, column=-1)
+                TypeVarTupleType(
+                    tv.name, tv.fullname, tv.id, tv.upper_bound, tv.default, line=-1, column=-1
+                )
             )
         else:
             assert isinstance(tv, ParamSpecType)
             tv = ParamSpecType(
-                tv.name, tv.fullname, tv.id, tv.flavor, tv.upper_bound, tv.default, line=-1, column=-1
+                tv.name,
+                tv.fullname,
+                tv.id,
+                tv.flavor,
+                tv.upper_bound,
+                tv.default,
+                line=-1,
+                column=-1,
             )
         tvs.append(tv)
     inst = Instance(typ, tvs)

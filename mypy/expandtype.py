@@ -31,6 +31,7 @@ from mypy.types import (
     UnionType,
     UnpackType,
     get_proper_type,
+    has_type_vars,
 )
 from mypy.typevartuples import split_with_instance, split_with_prefix_and_suffix
 
@@ -143,13 +144,13 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def visit_type_var(self, t: TypeVarType) -> Type:
         repl = self.variables.get(t.id, t)
-        if isinstance(repl, TypeVarType) and repl.has_default():
-            print(f"Expanding type variable {repl} with default")
-            repl = expand_type(repl.default, self.variables)
-            assert isinstance(repl, Instance)
-            print("expanded again", repl)
 
-        if isinstance(repl, ProperType) and isinstance(repl, Instance):
+        if has_type_vars(repl) and not isinstance(repl, TypeVarType):
+            repl = repl.accept(self)
+            if t.has_default():
+                repl = t.copy_modified(default=repl)
+
+        if isinstance(repl, Instance):
             # TODO: do we really need to do this?
             # If I try to remove this special-casing ~40 tests fail on reveal_type().
             return repl.copy_modified(last_known_value=None)
@@ -339,7 +340,4 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
         return t.copy_modified(args=self.expand_types(t.args))
 
     def expand_types(self, types: Iterable[Type]) -> List[Type]:
-        a: List[Type] = []
-        for t in types:
-            a.append(t.accept(self))
-        return a
+        return [t.accept(self) for t in types]

@@ -1,4 +1,7 @@
-from typing import Dict, Optional, Union
+from __future__ import annotations
+
+from copy import copy, deepcopy
+from typing import Dict, Generator, Optional, Union
 
 from mypy.nodes import (
     ParamSpecExpr,
@@ -7,14 +10,65 @@ from mypy.nodes import (
     TypeVarLikeExpr,
     TypeVarTupleExpr,
 )
+from mypy.type_visitor import TypeVisitor
 from mypy.types import (
+    CallableType,
+    Instance,
+    Overloaded,
     ParamSpecFlavor,
     ParamSpecType,
+    TupleType,
+    TypeAliasType,
+    TypedDictType,
     TypeVarId,
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
+    UnionType,
+    has_type_vars,
 )
+
+
+class TypeVarLikeYielder(TypeVisitor[Generator[TypeVarLikeType, None, None]]):
+    """Yield all TypeVarLikeTypes in a type."""
+
+    def visit_type_var(self, t: TypeVarType) -> Generator[TypeVarLikeType, None, None]:
+        yield t
+
+    def visit_type_var_tuple(self, t: TypeVarTupleType) -> Generator[TypeVarLikeType, None, None]:
+        yield t
+
+    def visit_param_spec(self, t: ParamSpecType) -> Generator[TypeVarLikeType, None, None]:
+        yield t
+
+    def visit_callable_type(self, t: CallableType) -> Generator[TypeVarLikeType, None, None]:
+        for arg in t.arg_types:
+            yield from arg.accept(self)
+        yield from t.ret_type.accept(self)
+
+    def visit_instance(self, t: Instance) -> Generator[TypeVarLikeType, None, None]:
+        for arg in t.args:
+            yield from arg.accept(self)
+
+    def visit_overloaded(self, t: Overloaded) -> Generator[TypeVarLikeType, None, None]:
+        for item in t.items:
+            yield from item.accept(self)
+
+    def visit_tuple_type(self, t: TupleType) -> Generator[TypeVarLikeType, None, None]:
+        for item in t.items:
+            yield from item.accept(self)
+
+    def visit_type_alias_type(self, t: TypeAliasType) -> Generator[TypeVarLikeType, None, None]:
+        for arg in t.args:
+            yield from arg.accept(self)
+
+    def visit_typeddict_type(self, t: TypedDictType) -> Generator[TypeVarLikeType, None, None]:
+        for arg in t.items.values():
+            yield from arg.accept(self)
+
+    def visit_union_type(self, t: UnionType) -> Generator[TypeVarLikeType, None, None]:
+        for arg in t.items:
+            yield from arg.accept(self)
 
 
 class TypeVarLikeScope:
@@ -79,18 +133,25 @@ class TypeVarLikeScope:
             i = self.class_id
             namespace = self.namespace
         else:
-            self.func_id -= 1
+            self.func_id += 1
             i = self.func_id
             # TODO: Consider also using namespaces for functions
-            namespace = ""
+            namespace = self.namespace
         if isinstance(tvar_expr, TypeVarExpr):
+            # fix the namespace of any type vars
+            default = tvar_expr.default
+
+            for tv in default.accept(TypeVarLikeYielder()):
+                tv = copy(tv)
+                tv.id.namespace = namespace
+                self.scope[tv.fullname] = tv
             tvar_def: TypeVarLikeType = TypeVarType(
                 name,
                 tvar_expr.fullname,
                 TypeVarId(i, namespace=namespace),
                 values=tvar_expr.values,
                 upper_bound=tvar_expr.upper_bound,
-                default=tvar_expr.default,
+                default=default,
                 variance=tvar_expr.variance,
                 line=tvar_expr.line,
                 column=tvar_expr.column,

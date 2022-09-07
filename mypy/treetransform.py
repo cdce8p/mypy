@@ -582,12 +582,20 @@ class TransformVisitor(NodeVisitor[Node]):
 
     def visit_paramspec_expr(self, node: ParamSpecExpr) -> ParamSpecExpr:
         return ParamSpecExpr(
-            node.name, node.fullname, self.type(node.upper_bound), self.type(node.default), variance=node.variance
+            node.name,
+            node.fullname,
+            self.type(node.upper_bound),
+            self.type(node.default),
+            variance=node.variance,
         )
 
     def visit_type_var_tuple_expr(self, node: TypeVarTupleExpr) -> TypeVarTupleExpr:
         return TypeVarTupleExpr(
-            node.name, node.fullname, self.type(node.upper_bound), self.type(node.default), variance=node.variance
+            node.name,
+            node.fullname,
+            self.type(node.upper_bound),
+            self.type(node.default),
+            variance=node.variance,
         )
 
     def visit_type_alias_expr(self, node: TypeAliasExpr) -> TypeAliasExpr:

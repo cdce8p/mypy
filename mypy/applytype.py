@@ -103,7 +103,9 @@ def apply_generic_arguments(
                 id_to_type[tvar.id] = id_to_type[tvar.default.id]
             else:
                 id_to_type[tvar.id] = tvar.default
-        elif isinstance(target_type, TypeVarLikeType) and isinstance(target_type.default, TypeVarLikeType):
+        elif isinstance(target_type, TypeVarLikeType) and isinstance(
+            target_type.default, TypeVarLikeType
+        ):
             id_to_type[target_type.id] = id_to_type[target_type.default.id]
         elif target_type is not None:
             id_to_type[tvar.id] = target_type

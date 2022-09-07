@@ -19,7 +19,7 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import Final, TypeAlias as _TypeAlias, overload
+from typing_extensions import Final, Self, TypeAlias as _TypeAlias, overload
 
 import mypy.nodes
 from mypy.bogus_type import Bogus
@@ -436,13 +436,14 @@ class TypeVarId:
         return TypeVarId(raw_id, meta_level)
 
     def __repr__(self) -> str:
+        # return f"TypeVarId({self.raw_id}, {self.meta_level}, {self.namespace})"
         return self.raw_id.__repr__()
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, TypeVarId):
             return (
                 self.raw_id == other.raw_id
-                and self.meta_level == other.meta_level
+                # and self.meta_level == other.meta_level# TODO this probably breaks a lot of stuff
                 and self.namespace == other.namespace
             )
         else:
@@ -452,7 +453,13 @@ class TypeVarId:
         return not (self == other)
 
     def __hash__(self) -> int:
-        return hash((self.raw_id, self.meta_level, self.namespace))
+        return hash(
+            (
+                self.raw_id,
+                # self.meta_level,
+                self.namespace,
+            )
+        )
 
     def is_meta_var(self) -> bool:
         return self.meta_level > 0
@@ -494,13 +501,16 @@ class TypeVarLikeType(ProperType):
         raise NotImplementedError
 
     def has_default(self) -> bool:
-        return not (isinstance(self.default, AnyType) and self.default.type_of_any == TypeOfAny.from_omitted_generics)
+        return not (
+            isinstance(self.default, AnyType)
+            and self.default.type_of_any == TypeOfAny.from_omitted_generics
+        )
 
 
 class TypeVarType(TypeVarLikeType):
     """Type that refers to a type variable."""
 
-    __slots__ = ("values", "variance")
+    __slots__ = ("values", "variance", "stack")
 
     values: List[Type]  # Value restriction, empty list if no restriction
     variance: int
@@ -521,10 +531,12 @@ class TypeVarType(TypeVarLikeType):
         assert values is not None, "No restrictions must be represented by empty list"
         self.values = values
         self.variance = variance
+        self.stack = inspect.stack()
 
     @staticmethod
     def new_unification_variable(old: "TypeVarType") -> "TypeVarType":
         new_id = TypeVarId.new(meta_level=1)
+        new_id.namespace = old.id.namespace
         return TypeVarType(
             old.name,
             old.fullname,
@@ -573,6 +585,19 @@ class TypeVarType(TypeVarLikeType):
             deserialize_type(data["upper_bound"]),
             deserialize_type(data["default"]),
             data["variance"],
+        )
+
+    def copy_modified(self, *, upper_bound: Bogus[Type] = _dummy, default: Bogus[Type] = _dummy) -> Self:
+        return self.__class__(
+            self.name,
+            self.fullname,
+            self.id,
+            self.values,
+            upper_bound if upper_bound is not _dummy else self.upper_bound,
+            default if default is not _dummy else self.default,
+            self.variance,
+            self.line,
+            self.column,
         )
 
 
@@ -1205,7 +1230,7 @@ class Instance(ProperType):
 
     """
 
-    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash")
+    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash", "stack")
 
     def __init__(
         self,
@@ -1217,6 +1242,7 @@ class Instance(ProperType):
         last_known_value: Optional["LiteralType"] = None,
     ) -> None:
         super().__init__(line, column)
+        self.stack = inspect.stack()
         self.type = typ
         self.args = tuple(args)
         self.type_ref: Optional[str] = None
@@ -2869,7 +2895,7 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             s = f"{t.name}`{t.id}"
         if self.id_mapper and t.upper_bound:
             s += f"(upper_bound={t.upper_bound.accept(self)})"
-        if t.upper_bound:
+        if t.default:
             s += f" = {t.default.accept(self)}"
         return s
 
