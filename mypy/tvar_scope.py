@@ -10,26 +10,42 @@ from mypy.nodes import (
     TypeVarLikeExpr,
     TypeVarTupleExpr,
 )
-from mypy.type_visitor import TypeVisitor
+from mypy.type_visitor import SyntheticTypeVisitor, T, TypeVisitor
 from mypy.types import (
+    AnyType,
+    CallableArgument,
     CallableType,
+    DeletedType,
+    EllipsisType,
+    ErasedType,
     Instance,
+    LiteralType,
+    NoneType,
     Overloaded,
+    Parameters,
     ParamSpecFlavor,
     ParamSpecType,
+    PartialType,
+    PlaceholderType,
+    RawExpressionType,
+    StarType,
     TupleType,
     TypeAliasType,
     TypedDictType,
+    TypeList,
+    TypeType,
     TypeVarId,
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
+    UnboundType,
+    UninhabitedType,
     UnionType,
-    has_type_vars,
+    UnpackType,
 )
 
 
-class TypeVarLikeYielder(TypeVisitor[Generator[TypeVarLikeType, None, None]]):
+class TypeVarLikeYielder(SyntheticTypeVisitor[Generator[TypeVarLikeType, None, None]]):
     """Yield all TypeVarLikeTypes in a type."""
 
     def visit_type_var(self, t: TypeVarType) -> Generator[TypeVarLikeType, None, None]:
@@ -69,6 +85,57 @@ class TypeVarLikeYielder(TypeVisitor[Generator[TypeVarLikeType, None, None]]):
     def visit_union_type(self, t: UnionType) -> Generator[TypeVarLikeType, None, None]:
         for arg in t.items:
             yield from arg.accept(self)
+
+    def visit_type_type(self, t: TypeType) -> T:
+        yield from t.item.accept(self)
+
+    def visit_star_type(self, t: StarType) -> T:
+        yield from ()
+
+    def visit_type_list(self, t: TypeList) -> T:
+        yield from ()
+
+    def visit_callable_argument(self, t: CallableArgument) -> T:
+        yield from ()
+
+    def visit_ellipsis_type(self, t: EllipsisType) -> T:
+        yield from ()
+
+    def visit_raw_expression_type(self, t: RawExpressionType) -> T:
+        yield from ()
+
+    def visit_unbound_type(self, t: UnboundType) -> T:
+        yield from ()
+
+    def visit_none_type(self, t: NoneType) -> T:
+        yield from ()
+
+    def visit_uninhabited_type(self, t: UninhabitedType) -> T:
+        yield from ()
+
+    def visit_erased_type(self, t: ErasedType) -> T:
+        yield from ()
+
+    def visit_deleted_type(self, t: DeletedType) -> T:
+        yield from ()
+
+    def visit_parameters(self, t: Parameters) -> T:
+        yield from ()
+
+    def visit_literal_type(self, t: LiteralType) -> T:
+        yield from ()
+
+    def visit_partial_type(self, t: PartialType) -> T:
+        yield from ()
+
+    def visit_unpack_type(self, t: UnpackType) -> T:
+        yield from ()
+
+    def visit_any(self, t: AnyType) -> Generator[TypeVarLikeType, None, None]:
+        yield from ()
+
+    def visit_placeholder_type(self, t: PlaceholderType) -> Generator[TypeVarLikeType, None, None]:
+        yield from ()
 
 
 class TypeVarLikeScope:
@@ -131,12 +198,10 @@ class TypeVarLikeScope:
         if self.is_class_scope:
             self.class_id += 1
             i = self.class_id
-            namespace = self.namespace
         else:
             self.func_id += 1
             i = self.func_id
-            # TODO: Consider also using namespaces for functions
-            namespace = self.namespace
+        namespace = self.namespace
         if isinstance(tvar_expr, TypeVarExpr):
             # fix the namespace of any type vars
             default = tvar_expr.default

@@ -1529,7 +1529,6 @@ def expand_type_alias(
         no_args: whether original definition used a bare generic `A = List`
         ctx: context where expansion happens
     """
-    print("expanding", node.target)
     exp_len = len(node.alias_tvars)
     act_len = len(args)
     if exp_len > 0 and act_len == 0:

@@ -3730,7 +3730,9 @@ class ExpressionChecker(ExpressionVisitor[Type]):
 
         if isinstance(tp, CallableType):
             if isinstance(ctx, TypeApplication) and isinstance(ctx.expr, NameExpr):
-                if isinstance(ctx.expr.node, TypeAlias) and isinstance(ctx.expr.node.target, Instance):
+                if isinstance(ctx.expr.node, TypeAlias) and isinstance(
+                    ctx.expr.node.target, Instance
+                ):
                     type_vars = ctx.expr.node.target.type.defn.type_vars
                 elif isinstance(ctx.expr.node, TypeInfo):
                     type_vars = ctx.expr.node.defn.type_vars
@@ -3739,7 +3741,7 @@ class ExpressionChecker(ExpressionVisitor[Type]):
 
                 remaining = len(args) - len(tp.variables)
                 if remaining < 0:
-                    args = tuple(list(args) + [tv.default for tv in type_vars[remaining:] ])
+                    args = tuple(list(args) + [tv.default for tv in type_vars[remaining:]])
             if len(tp.variables) != len(args):
                 self.msg.incompatible_type_application(len(tp.variables), len(args), ctx)
                 return AnyType(TypeOfAny.from_error)

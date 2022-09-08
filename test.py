@@ -1,5 +1,5 @@
-from typing import Callable, Generic, ParamSpec, TypeAlias, TypeVar
-from typing_extensions import reveal_type
+from typing import Callable, Generic, TypeVar
+from typing_extensions import reveal_type, ParamSpec, TypeAlias
 
 T = TypeVar("T", default=int)
 T2 = TypeVar("T2", default=Callable[[T], int])
@@ -17,6 +17,10 @@ reveal_type(partially)
 reveal_type(partially[int])
 reveal_type(partially1)
 reveal_type(Foo[str, int])
+
+P = ParamSpec("P", default=[int, str])
+def foo(fn: Callable[P, int]) -> bool: ...
+reveal_type(foo)
 
 # specialised: TypeAlias = "Foo[str]"
 # specialised2: TypeAlias = "Foo[str, bool]"

@@ -587,7 +587,9 @@ class TypeVarType(TypeVarLikeType):
             data["variance"],
         )
 
-    def copy_modified(self, *, upper_bound: Bogus[Type] = _dummy, default: Bogus[Type] = _dummy) -> Self:
+    def copy_modified(
+        self, *, upper_bound: Bogus[Type] = _dummy, default: Bogus[Type] = _dummy
+    ) -> Self:
         return self.__class__(
             self.name,
             self.fullname,
@@ -1242,7 +1244,7 @@ class Instance(ProperType):
         last_known_value: Optional["LiteralType"] = None,
     ) -> None:
         super().__init__(line, column)
-        self.stack = inspect.stack()
+        # self.stack = inspect.stack()
         self.type = typ
         self.args = tuple(args)
         self.type_ref: Optional[str] = None
@@ -2912,6 +2914,9 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             s += f"{t.name_with_suffix()}`{t.id}"
         if t.prefix.arg_types:
             s += "]"
+
+        if t.has_default():
+            s += f" = {t.default}"
         return s
 
     def visit_parameters(self, t: Parameters) -> str:
@@ -2983,6 +2988,8 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             if s:
                 s += ", "
             s += f"*{n}.args, **{n}.kwargs"
+            if param_spec.has_default():
+                s += f" = {param_spec.default}"
 
         s = f"({s})"
 

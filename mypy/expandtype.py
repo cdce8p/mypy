@@ -114,6 +114,7 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def __init__(self, variables: Mapping[TypeVarId, Type]) -> None:
         self.variables = variables
+        self.recursive_guard: set[Type] = set()
 
     def visit_unbound_type(self, t: UnboundType) -> Type:
         return t
@@ -145,7 +146,11 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
     def visit_type_var(self, t: TypeVarType) -> Type:
         repl = self.variables.get(t.id, t)
 
-        if has_type_vars(repl) and not isinstance(repl, TypeVarType):
+        if not isinstance(repl, TypeVarType) and has_type_vars(repl):
+            print("got repl", repl)
+            if repl in self.recursive_guard:
+                return repl
+            self.recursive_guard.add(repl)
             repl = repl.accept(self)
             if t.has_default():
                 repl = t.copy_modified(default=repl)
