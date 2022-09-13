@@ -3810,6 +3810,7 @@ class SemanticAnalyzer(
             )
             paramspec_var.line = call.line
             call.analyzed = paramspec_var
+            self.tvar_scope.bind_new(name, paramspec_var)
         else:
             assert isinstance(call.analyzed, ParamSpecExpr)
         self.add_symbol(name, call.analyzed, s)
