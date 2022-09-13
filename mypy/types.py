@@ -684,6 +684,7 @@ class ParamSpecType(TypeVarLikeType):
         id: Bogus[Union[TypeVarId, int]] = _dummy,
         flavor: Bogus[int] = _dummy,
         prefix: Bogus["Parameters"] = _dummy,
+        default: Bogus[Type] = _dummy,
     ) -> "ParamSpecType":
         return ParamSpecType(
             self.name,
@@ -691,7 +692,7 @@ class ParamSpecType(TypeVarLikeType):
             id if id is not _dummy else self.id,
             flavor if flavor is not _dummy else self.flavor,
             self.upper_bound,
-            self.default,
+            default=default if default is not _dummy else self.default,
             line=self.line,
             column=self.column,
             prefix=prefix if prefix is not _dummy else self.prefix,
@@ -3222,6 +3223,17 @@ class HasTypeVars(TypeQuery[bool]):
 def has_type_vars(typ: Type) -> bool:
     """Check if a type contains any type variables (recursively)."""
     return typ.accept(HasTypeVars())
+
+class HasParamSpecs(TypeQuery[bool ]):
+    def __init__(self) -> None:
+        super().__init__(any)
+
+    def visit_param_spec(self, t: ParamSpecType) -> bool:
+        return True
+
+
+def has_param_specs(typ: Type) -> bool:
+    return typ.accept(HasParamSpecs())
 
 
 class HasRecursiveType(TypeQuery[bool]):

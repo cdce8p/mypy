@@ -31,6 +31,7 @@ from mypy.types import (
     UnionType,
     UnpackType,
     get_proper_type,
+    has_param_specs,
     has_type_vars,
 )
 from mypy.typevartuples import split_with_instance, split_with_prefix_and_suffix
@@ -162,6 +163,15 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def visit_param_spec(self, t: ParamSpecType) -> Type:
         repl = get_proper_type(self.variables.get(t.id, t))
+
+        if not isinstance(repl, ParamSpecType) and has_param_specs(repl):
+            if repl in self.recursive_guard:
+                return repl
+            self.recursive_guard.add(repl)
+            repl = repl.accept(self)
+            if t.has_default():
+                repl = t.copy_modified(default=repl)
+
         if isinstance(repl, Instance):
             # TODO: what does prefix mean in this case?
             # TODO: why does this case even happen? Instances aren't plural.
