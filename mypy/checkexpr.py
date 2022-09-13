@@ -3742,9 +3742,9 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                 remaining = len(args) - len(tp.variables)
                 if remaining < 0:
                     args = tuple(list(args) + [tv.default for tv in type_vars[remaining:]])
-            if len(tp.variables) != len(args):
-                self.msg.incompatible_type_application(len(tp.variables), len(args), ctx)
-                return AnyType(TypeOfAny.from_error)
+            # if len(tp.variables) != len(args):
+            #     self.msg.incompatible_type_application(len(tp.variables), len(args), ctx)
+            #     return AnyType(TypeOfAny.from_error)
             return self.apply_generic_arguments(tp, args, ctx)
         if isinstance(tp, Overloaded):
             for it in tp.items:

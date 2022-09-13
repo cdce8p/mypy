@@ -147,7 +147,6 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
         repl = self.variables.get(t.id, t)
 
         if not isinstance(repl, TypeVarType) and has_type_vars(repl):
-            print("got repl", repl)
             if repl in self.recursive_guard:
                 return repl
             self.recursive_guard.add(repl)
