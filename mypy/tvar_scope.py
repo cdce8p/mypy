@@ -202,14 +202,14 @@ class TypeVarLikeScope:
             self.func_id += 1
             i = self.func_id
         namespace = self.namespace
-        if isinstance(tvar_expr, TypeVarExpr):
-            # fix the namespace of any type vars
-            default = tvar_expr.default
+        # fix the namespace of any type vars
+        default = tvar_expr.default
 
-            for tv in default.accept(TypeVarLikeYielder()):
-                tv = copy(tv)
-                tv.id.namespace = namespace
-                self.scope[tv.fullname] = tv
+        for tv in default.accept(TypeVarLikeYielder()):
+            tv = copy(tv)
+            tv.id.namespace = namespace
+            self.scope[tv.fullname] = tv
+        if isinstance(tvar_expr, TypeVarExpr):
             tvar_def: TypeVarLikeType = TypeVarType(
                 name,
                 tvar_expr.fullname,
@@ -228,7 +228,7 @@ class TypeVarLikeScope:
                 i,
                 flavor=ParamSpecFlavor.BARE,
                 upper_bound=tvar_expr.upper_bound,
-                default=tvar_expr.default,
+                default=default,
                 line=tvar_expr.line,
                 column=tvar_expr.column,
             )
@@ -238,7 +238,7 @@ class TypeVarLikeScope:
                 tvar_expr.fullname,
                 i,
                 upper_bound=tvar_expr.upper_bound,
-                default=tvar_expr.default,
+                default=default,
                 line=tvar_expr.line,
                 column=tvar_expr.column,
             )

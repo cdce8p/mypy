@@ -1358,7 +1358,7 @@ class SemanticAnalyzer(
 
         for tvd in tvar_defs:
             if isinstance(tvd, TypeVarType) and any(
-                has_placeholder(t) for t in [tvd.upper_bound] + tvd.values
+                has_placeholder(t) for t in [tvd.upper_bound, tvd.default] + tvd.values
             ):
                 # Some type variable bounds or values are not ready, we need
                 # to re-analyze this class.
@@ -1606,7 +1606,10 @@ class SemanticAnalyzer(
                     _, _, default_type_var_name = fullname.rpartition(".")
                     if tvar_expr.default.name == default_type_var_name:
                         tvar_expr.default = type_var
-            tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
+
+            tvar_def =  self.tvar_scope.get_binding(name)
+            if tvar_def is None:
+                tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
             tvar_defs.append(tvar_def)
         return base_type_exprs, tvar_defs, is_protocol
 
@@ -1652,12 +1655,22 @@ class SemanticAnalyzer(
         if sym and isinstance(sym.node, PlaceholderNode):
             self.record_incomplete_ref()
         if sym and isinstance(sym.node, ParamSpecExpr):
-            if sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
+            if (
+                sym.fullname
+                and not self.tvar_scope.allow_binding(sym.fullname)
+                and self.tvar_scope.parent
+                and self.tvar_scope.parent.allow_binding(sym.fullname)
+            ):
                 # It's bound by our type variable scope
                 return None
             return unbound.name, sym.node
         if sym and isinstance(sym.node, TypeVarTupleExpr):
-            if sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
+            if (
+                sym.fullname
+                and not self.tvar_scope.allow_binding(sym.fullname)
+                and self.tvar_scope.parent
+                and self.tvar_scope.parent.allow_binding(sym.fullname)
+            ):
                 # It's bound by our type variable scope
                 return None
             return unbound.name, sym.node
@@ -3837,7 +3850,6 @@ class SemanticAnalyzer(
         name = self.extract_typevarlike_name(s, call)
         if name is None:
             return False
-        s
 
         # PEP 646 does not specify the behavior of variance, constraints, or bounds.
         if not call.analyzed:

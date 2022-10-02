@@ -1478,18 +1478,6 @@ def fix_instance(
     Also emit a suitable error if this is not due to implicit Any's.
     """
 
-    def error():
-        n = len(t.type.type_vars)
-        s = f"{n} type arguments"
-        if n == 0:
-            s = "no type arguments"
-        elif n == 1:
-            s = "1 type argument"
-        act = str(len(t.args))
-        if act == "0":
-            act = "none"
-        fail(f'"{t.type.name}" expects {s}, but {act} given', t, code=codes.TYPE_ARG)
-
     if any(tv.has_default() for tv in t.type.defn.type_vars):
         fixed = expand_type(t, {tv.id: t for tv, t in zip(t.type.defn.type_vars, t.args)})
         assert isinstance(fixed, Instance)
@@ -1504,7 +1492,16 @@ def fix_instance(
         t.args = (any_type,) * len(t.type.type_vars)
         return
 
-    error()
+    n = len(t.type.type_vars)
+    s = f"{n} type arguments"
+    if n == 0:
+        s = "no type arguments"
+    elif n == 1:
+        s = "1 type argument"
+    act = str(len(t.args))
+    if act == "0":
+        act = "none"
+    fail(f'"{t.type.name}" expects {s}, but {act} given', t, code=codes.TYPE_ARG)
     t.args = tuple(AnyType(TypeOfAny.from_error) for _ in t.type.type_vars)
     t.invalid = True
 
@@ -1558,9 +1555,9 @@ def expand_type_alias(
         tp.line = ctx.line
         tp.column = ctx.column
         return tp
-    if act_len != exp_len:
-        fail(f"Bad number of arguments for type alias, expected: {exp_len}, given: {act_len}", ctx)
-        return set_any_tvars(node, ctx.line, ctx.column, from_error=True)
+    # if act_len != exp_len:
+    #     fail(f"Bad number of arguments for type alias, expected: {exp_len}, given: {act_len}", ctx)
+    #     return set_any_tvars(node, ctx.line, ctx.column, from_error=True)
     typ = TypeAliasType(node, args, ctx.line, ctx.column)
     assert typ.alias is not None
     # HACK: Implement FlexibleAlias[T, typ] by expanding it to typ here.

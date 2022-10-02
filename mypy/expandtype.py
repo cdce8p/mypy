@@ -88,18 +88,11 @@ def freshen_function_type_vars(callee: F) -> F:
         tvmap: Dict[TypeVarId, Type] = {}
         for v in callee.variables:
             # TODO(PEP612): fix for ParamSpecType
-            if isinstance(v, TypeVarType):
-                tv: TypeVarLikeType = TypeVarType.new_unification_variable(v)
-            elif isinstance(v, TypeVarTupleType):
-                assert isinstance(v, TypeVarTupleType)
-                tv = TypeVarTupleType.new_unification_variable(v)
-            else:
-                assert isinstance(v, ParamSpecType)
-                tv = ParamSpecType.new_unification_variable(v)
+            tv = v.new_unification_variable(v)  # TODO figure out how to make the id actually increment correctly
             if isinstance(tv.default, tv.__class__):
                 tv.default = tvmap[tv.default.id]
             tvs.append(tv)
-            tvmap[v.id] = tv
+            tvmap[tv.id] = tv
         fresh = cast(CallableType, expand_type(callee, tvmap)).copy_modified(variables=tvs)
         return cast(F, fresh)
     else:
