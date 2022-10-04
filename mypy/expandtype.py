@@ -88,7 +88,7 @@ def freshen_function_type_vars(callee: F) -> F:
         tvmap: Dict[TypeVarId, Type] = {}
         for v in callee.variables:
             # TODO(PEP612): fix for ParamSpecType
-            tv = v.new_unification_variable(v)  # TODO figure out how to make the id actually increment correctly
+            tv = v.new_unification_variable(v)
             if isinstance(tv.default, tv.__class__):
                 tv.default = tvmap[tv.default.id]
             tvs.append(tv)
@@ -132,7 +132,6 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
     def visit_instance(self, t: Instance) -> Type:
         args = self.expand_types_with_unpack(list(t.args))
         if isinstance(args, list):
-            args_with_defaults = []
             return Instance(t.type, args, t.line, t.column)
         else:
             return args
@@ -140,7 +139,7 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
     def visit_type_var(self, t: TypeVarType) -> Type:
         repl = self.variables.get(t.id, t)
 
-        if not isinstance(repl, TypeVarType) and has_type_vars(repl):
+        if has_type_vars(repl):
             if repl in self.recursive_guard:
                 return repl
             self.recursive_guard.add(repl)
@@ -157,7 +156,7 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
     def visit_param_spec(self, t: ParamSpecType) -> Type:
         repl = get_proper_type(self.variables.get(t.id, t))
 
-        if not isinstance(repl, ParamSpecType) and has_param_specs(repl):
+        if has_param_specs(repl):
             if repl in self.recursive_guard:
                 return repl
             self.recursive_guard.add(repl)

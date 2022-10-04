@@ -467,7 +467,7 @@ class TypeVarId:
 
 class TypeVarLikeType(ProperType):
 
-    __slots__ = ("name", "fullname", "id", "upper_bound", "default", "stack")
+    __slots__ = ("name", "fullname", "id", "upper_bound", "default")
 
     name: str  # Name (may be qualified)
     fullname: str  # Fully qualified name
@@ -492,7 +492,6 @@ class TypeVarLikeType(ProperType):
         self.id = id
         self.upper_bound = upper_bound
         self.default = default
-        self.stack = inspect.stack()
 
     def serialize(self) -> JsonDict:
         raise NotImplementedError
@@ -521,7 +520,7 @@ class TypeVarLikeType(ProperType):
 class TypeVarType(TypeVarLikeType):
     """Type that refers to a type variable."""
 
-    __slots__ = ("values", "variance", "stack")
+    __slots__ = ("values", "variance")
 
     values: List[Type]  # Value restriction, empty list if no restriction
     variance: int
@@ -1210,7 +1209,7 @@ class Instance(ProperType):
 
     """
 
-    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash", "stack")
+    __slots__ = ("type", "args", "invalid", "type_ref", "last_known_value", "_hash")
 
     def __init__(
         self,
@@ -1222,7 +1221,6 @@ class Instance(ProperType):
         last_known_value: Optional["LiteralType"] = None,
     ) -> None:
         super().__init__(line, column)
-        # self.stack = inspect.stack()
         self.type = typ
         self.args = tuple(args)
         self.type_ref: Optional[str] = None

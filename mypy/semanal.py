@@ -1676,14 +1676,8 @@ class SemanticAnalyzer(
             return unbound.name, sym.node
         if sym is None or not isinstance(sym.node, TypeVarExpr):
             return None
-        elif (
-            sym.fullname
-            and not self.tvar_scope.allow_binding(sym.fullname)
-            and self.tvar_scope.parent
-            and self.tvar_scope.parent.allow_binding(sym.fullname)
-        ):
+        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
             # It's bound by our type variable scope
-            print("is it?")
             return None
         else:
             if isinstance(sym.node.default, sym.node.__class__):
@@ -3806,12 +3800,11 @@ class SemanticAnalyzer(
                 default = self.get_typevarlike_argument(param_name, param_value, s)
                 if default is None:
                     return False
-                break
-        else:
-            # ParamSpec is different from a regular TypeVar:
-            # arguments are not semantically valid. But, allowed in runtime.
-            # So, we need to warn users about possible invalid usage.
-            self.fail("Only the first argument to ParamSpec has defined semantics", s)
+            else:
+                # ParamSpec is different from a regular TypeVar:
+                # arguments are not semantically valid. But, allowed in runtime.
+                # So, we need to warn users about possible invalid usage.
+                self.fail("Only the first argument to ParamSpec has defined semantics", s)
 
         # PEP 612 reserves the right to define bound, covariant and contravariant arguments to
         # ParamSpec in a later PEP. If and when that happens, we should do something
@@ -4349,6 +4342,7 @@ class SemanticAnalyzer(
 
     def bind_name_expr(self, expr: NameExpr, sym: SymbolTableNode) -> None:
         """Bind name expression to a symbol table node."""
+        # TODO renenable this check, its fine for defaults
         # if isinstance(sym.node, TypeVarExpr) and self.tvar_scope.get_binding(sym):
         #     self.fail(
         #         '"{}" is a type variable and only valid in type ' "context".format(expr.name), expr
@@ -6016,7 +6010,7 @@ class SemanticAnalyzer(
             report_invalid_types=report_invalid_types,
         )
         tag = self.track_incomplete_refs()
-        typ = typ.accept(a)  # ADD BREAKPOINt
+        typ = typ.accept(a)
         if self.found_incomplete_ref(tag):
             # Something could not be bound yet.
             return None

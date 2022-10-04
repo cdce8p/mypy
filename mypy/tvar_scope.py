@@ -199,7 +199,7 @@ class TypeVarLikeScope:
             self.class_id += 1
             i = self.class_id
         else:
-            self.func_id += 1
+            self.func_id -= 1
             i = self.func_id
         namespace = self.namespace
         # fix the namespace of any type vars
