@@ -2894,7 +2894,7 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             s += "]"
 
         if t.has_default():
-            s += f" = {t.default}"
+            s += f" = {t.default.accept(self)}"
         return s
 
     def visit_parameters(self, t: Parameters) -> str:
@@ -2967,7 +2967,7 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
                 s += ", "
             s += f"*{n}.args, **{n}.kwargs"
             if param_spec.has_default():
-                s += f" = {param_spec.default}"
+                s += f" = {param_spec.default.accept(self)}"
 
         s = f"({s})"
 

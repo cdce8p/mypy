@@ -1607,7 +1607,7 @@ class SemanticAnalyzer(
                     if tvar_expr.default.name == default_type_var_name:
                         tvar_expr.default = type_var
 
-            tvar_def =  self.tvar_scope.get_binding(name)
+            tvar_def = self.tvar_scope.get_binding(tvar_expr.fullname)
             if tvar_def is None:
                 tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
             tvar_defs.append(tvar_def)
@@ -3616,7 +3616,7 @@ class SemanticAnalyzer(
             if call.analyzed.values != values or call.analyzed.upper_bound != upper_bound:
                 self.progress = True
             call.analyzed.upper_bound = upper_bound
-            call.analyzed.default = upper_bound
+            call.analyzed.default = default
             call.analyzed.values = values
 
         self.add_symbol(name, call.analyzed, s)
@@ -3738,7 +3738,7 @@ class SemanticAnalyzer(
                 param_value,
                 allow_placeholder=True,
                 report_invalid_types=False,
-                # tvar_scope=self.tvar_scope,
+                tvar_scope=self.tvar_scope,
                 allow_tuple_literal=True,
                 allow_unbound_tvars=True,
                 allow_param_spec_literals=True,
