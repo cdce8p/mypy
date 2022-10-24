@@ -75,6 +75,7 @@ class TypeShallowCopier(TypeVisitor[ProperType]):
             t.id,
             values=t.values,
             upper_bound=t.upper_bound,
+            default=t.default,
             variance=t.variance,
         )
         return self.copy_common(t, dup)

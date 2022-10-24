@@ -54,10 +54,20 @@ class TypeFixture:
         def make_type_var(
             name: str, id: int, values: list[Type], upper_bound: Type, variance: int
         ) -> TypeVarType:
-            return TypeVarType(name, name, id, values, upper_bound, variance)
+            return TypeVarType(
+                name,
+                name,
+                id,
+                values,
+                upper_bound,
+                AnyType(TypeOfAny.from_omitted_generics),
+                variance,
+            )
 
         def make_type_var_tuple(name: str, id: int, upper_bound: Type) -> TypeVarTupleType:
-            return TypeVarTupleType(name, name, id, upper_bound)
+            return TypeVarTupleType(
+                name, name, id, upper_bound, AnyType(TypeOfAny.from_omitted_generics)
+            )
 
         self.t = make_type_var("T", 1, [], self.o, variance)  # T`1 (type variable)
         self.tf = make_type_var("T", -1, [], self.o, variance)  # T`-1 (type variable)

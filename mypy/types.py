@@ -434,13 +434,14 @@ class TypeVarId:
         return TypeVarId(raw_id, meta_level)
 
     def __repr__(self) -> str:
+        # return f"TypeVarId({self.raw_id}, {self.meta_level}, {self.namespace})"
         return self.raw_id.__repr__()
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, TypeVarId):
             return (
                 self.raw_id == other.raw_id
-                and self.meta_level == other.meta_level
+                # and self.meta_level == other.meta_level# TODO this probably breaks a lot of stuff
                 and self.namespace == other.namespace
             )
         else:
@@ -450,7 +451,13 @@ class TypeVarId:
         return not (self == other)
 
     def __hash__(self) -> int:
-        return hash((self.raw_id, self.meta_level, self.namespace))
+        return hash(
+            (
+                self.raw_id,
+                # self.meta_level,
+                self.namespace,
+            )
+        )
 
     def is_meta_var(self) -> bool:
         return self.meta_level > 0
@@ -458,7 +465,7 @@ class TypeVarId:
 
 class TypeVarLikeType(ProperType):
 
-    __slots__ = ("name", "fullname", "id", "upper_bound")
+    __slots__ = ("name", "fullname", "id", "upper_bound", "default")
 
     name: str  # Name (may be qualified)
     fullname: str  # Fully qualified name
@@ -471,6 +478,7 @@ class TypeVarLikeType(ProperType):
         fullname: str,
         id: TypeVarId | int,
         upper_bound: Type,
+        default: Type,
         line: int = -1,
         column: int = -1,
     ) -> None:
@@ -481,6 +489,7 @@ class TypeVarLikeType(ProperType):
             id = TypeVarId(id)
         self.id = id
         self.upper_bound = upper_bound
+        self.default = default
 
     def serialize(self) -> JsonDict:
         raise NotImplementedError
@@ -488,6 +497,22 @@ class TypeVarLikeType(ProperType):
     @classmethod
     def deserialize(cls, data: JsonDict) -> TypeVarLikeType:
         raise NotImplementedError
+
+    def copy_modified(self, *, id: TypeVarId, **kwargs: Any) -> TypeVarLikeType:
+        raise NotImplementedError
+
+    @classmethod
+    def new_unification_variable(cls, old: TypeVarLikeType) -> TypeVarLikeType:
+        new_id = TypeVarId.new(meta_level=1)
+        new_id.raw_id = old.id.raw_id
+        new_id.namespace = old.id.namespace
+        return old.copy_modified(id=new_id)
+
+    def has_default(self) -> bool:
+        return not (
+            isinstance(self.default, AnyType)
+            and self.default.type_of_any == TypeOfAny.from_omitted_generics
+        )
 
 
 class TypeVarType(TypeVarLikeType):
@@ -505,36 +530,15 @@ class TypeVarType(TypeVarLikeType):
         id: TypeVarId | int,
         values: list[Type],
         upper_bound: Type,
+        default: Type,
         variance: int = INVARIANT,
         line: int = -1,
         column: int = -1,
     ) -> None:
-        super().__init__(name, fullname, id, upper_bound, line, column)
+        super().__init__(name, fullname, id, upper_bound, default, line, column)
         assert values is not None, "No restrictions must be represented by empty list"
         self.values = values
         self.variance = variance
-
-    @staticmethod
-    def new_unification_variable(old: TypeVarType) -> TypeVarType:
-        new_id = TypeVarId.new(meta_level=1)
-        return old.copy_modified(id=new_id)
-
-    def copy_modified(
-        self,
-        values: Bogus[list[Type]] = _dummy,
-        upper_bound: Bogus[Type] = _dummy,
-        id: Bogus[TypeVarId | int] = _dummy,
-    ) -> TypeVarType:
-        return TypeVarType(
-            self.name,
-            self.fullname,
-            self.id if id is _dummy else id,
-            self.values if values is _dummy else values,
-            self.upper_bound if upper_bound is _dummy else upper_bound,
-            self.variance,
-            self.line,
-            self.column,
-        )
 
     def accept(self, visitor: TypeVisitor[T]) -> T:
         return visitor.visit_type_var(self)
@@ -557,6 +561,7 @@ class TypeVarType(TypeVarLikeType):
             "namespace": self.id.namespace,
             "values": [v.serialize() for v in self.values],
             "upper_bound": self.upper_bound.serialize(),
+            "default": self.default.serialize(),
             "variance": self.variance,
         }
 
@@ -569,7 +574,27 @@ class TypeVarType(TypeVarLikeType):
             TypeVarId(data["id"], namespace=data["namespace"]),
             [deserialize_type(v) for v in data["values"]],
             deserialize_type(data["upper_bound"]),
+            deserialize_type(data["default"]),
             data["variance"],
+        )
+
+    def copy_modified(
+        self,
+        *,
+        id: Union[TypeVarId, int] = _dummy,
+        upper_bound: Bogus[Type] = _dummy,
+        default: Bogus[Type] = _dummy,
+    ) -> TypeVarType:
+        return self.__class__(
+            self.name,
+            self.fullname,
+            id if id is not _dummy else self.id,
+            self.values,
+            upper_bound if upper_bound is not _dummy else self.upper_bound,
+            default if default is not _dummy else self.default,
+            self.variance,
+            self.line,
+            self.column,
         )
 
 
@@ -612,19 +637,15 @@ class ParamSpecType(TypeVarLikeType):
         id: TypeVarId | int,
         flavor: int,
         upper_bound: Type,
+        default: Type,
         *,
         line: int = -1,
         column: int = -1,
         prefix: Parameters | None = None,
     ) -> None:
-        super().__init__(name, fullname, id, upper_bound, line=line, column=column)
+        super().__init__(name, fullname, id, upper_bound, default, line=line, column=column)
         self.flavor = flavor
         self.prefix = prefix or Parameters([], [], [])
-
-    @staticmethod
-    def new_unification_variable(old: ParamSpecType) -> ParamSpecType:
-        new_id = TypeVarId.new(meta_level=1)
-        return old.copy_modified(id=new_id)
 
     def with_flavor(self, flavor: int) -> ParamSpecType:
         return ParamSpecType(
@@ -633,6 +654,7 @@ class ParamSpecType(TypeVarLikeType):
             self.id,
             flavor,
             upper_bound=self.upper_bound,
+            default=self.default,
             prefix=self.prefix,
         )
 
@@ -642,6 +664,7 @@ class ParamSpecType(TypeVarLikeType):
         id: Bogus[TypeVarId | int] = _dummy,
         flavor: Bogus[int] = _dummy,
         prefix: Bogus[Parameters] = _dummy,
+        default: Bogus[Type] = _dummy,
     ) -> ParamSpecType:
         return ParamSpecType(
             self.name,
@@ -649,6 +672,7 @@ class ParamSpecType(TypeVarLikeType):
             id if id is not _dummy else self.id,
             flavor if flavor is not _dummy else self.flavor,
             self.upper_bound,
+            default=default if default is not _dummy else self.default,
             line=self.line,
             column=self.column,
             prefix=prefix if prefix is not _dummy else self.prefix,
@@ -683,6 +707,7 @@ class ParamSpecType(TypeVarLikeType):
             "id": self.id.raw_id,
             "flavor": self.flavor,
             "upper_bound": self.upper_bound.serialize(),
+            "default": self.default.serialize(),
             "prefix": self.prefix.serialize(),
         }
 
@@ -695,6 +720,7 @@ class ParamSpecType(TypeVarLikeType):
             data["id"],
             data["flavor"],
             deserialize_type(data["upper_bound"]),
+            deserialize_type(data["default"]),
             prefix=Parameters.deserialize(data["prefix"]),
         )
 
@@ -719,7 +745,11 @@ class TypeVarTupleType(TypeVarLikeType):
     def deserialize(cls, data: JsonDict) -> TypeVarTupleType:
         assert data[".class"] == "TypeVarTupleType"
         return TypeVarTupleType(
-            data["name"], data["fullname"], data["id"], deserialize_type(data["upper_bound"])
+            data["name"],
+            data["fullname"],
+            data["id"],
+            deserialize_type(data["upper_bound"]),
+            deserialize_type(data["default"]),
         )
 
     def accept(self, visitor: TypeVisitor[T]) -> T:
@@ -733,17 +763,19 @@ class TypeVarTupleType(TypeVarLikeType):
             return NotImplemented
         return self.id == other.id
 
-    @staticmethod
-    def new_unification_variable(old: TypeVarTupleType) -> TypeVarTupleType:
-        new_id = TypeVarId.new(meta_level=1)
-        return old.copy_modified(id=new_id)
-
-    def copy_modified(self, id: Bogus[TypeVarId | int] = _dummy) -> TypeVarTupleType:
+    def copy_modified(
+        self,
+        *,
+        id: Bogus[Union[TypeVarId, int]] = _dummy,
+        upper_bound: Bogus[Type] = _dummy,
+        default: Bogus[Type] = _dummy,
+    ) -> TypeVarTupleType:
         return TypeVarTupleType(
             self.name,
             self.fullname,
-            self.id if id is _dummy else id,
-            self.upper_bound,
+            id if id is not _dummy else self.id,
+            upper_bound if upper_bound is not _dummy else self.upper_bound,
+            default if default is not _dummy else self.default,
             line=self.line,
             column=self.column,
         )
@@ -1913,6 +1945,7 @@ class CallableType(FunctionLike):
             arg_type.id,
             ParamSpecFlavor.BARE,
             arg_type.upper_bound,
+            arg_type.default,
             prefix=prefix,
         )
 
@@ -2923,6 +2956,8 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             s = f"{t.name}`{t.id}"
         if self.id_mapper and t.upper_bound:
             s += f"(upper_bound={t.upper_bound.accept(self)})"
+        if t.has_default():
+            s += f" = {t.default.accept(self)}"
         return s
 
     def visit_param_spec(self, t: ParamSpecType) -> str:
@@ -2938,6 +2973,9 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             s += f"{t.name_with_suffix()}`{t.id}"
         if t.prefix.arg_types:
             s += "]"
+
+        if t.has_default():
+            s += f" = {t.default.accept(self)}"
         return s
 
     def visit_parameters(self, t: Parameters) -> str:
@@ -3012,6 +3050,8 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
             if s:
                 s += ", "
             s += f"*{n}.args, **{n}.kwargs"
+            if param_spec.has_default():
+                s += f" = {param_spec.default.accept(self)}"
 
         s = f"({s})"
 
@@ -3030,12 +3070,16 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
                         vals = f"({', '.join(val.accept(self) for val in var.values)})"
                         vs.append(f"{var.name} in {vals}")
                     elif not is_named_instance(var.upper_bound, "builtins.object"):
-                        vs.append(f"{var.name} <: {var.upper_bound.accept(self)}")
+                        vs.append(
+                            f"{var.name} <: {var.upper_bound.accept(self)}{f' = {var.default.accept(self)}' if var.has_default() else ''}"
+                        )
                     else:
                         vs.append(var.name)
                 else:
-                    # For other TypeVarLikeTypes, just use the name
-                    vs.append(var.name)
+                    # For other TypeVarLikeTypes, use the name and default
+                    vs.append(
+                        f"{var.name}{f' = {var.default.accept(self)}' if var.has_default() else ''}"
+                    )
             s = f"[{', '.join(vs)}] {s}"
 
         return f"def {s}"
@@ -3244,6 +3288,18 @@ class HasTypeVars(TypeQuery[bool]):
 def has_type_vars(typ: Type) -> bool:
     """Check if a type contains any type variables (recursively)."""
     return typ.accept(HasTypeVars())
+
+
+class HasParamSpecs(TypeQuery[bool]):
+    def __init__(self) -> None:
+        super().__init__(any)
+
+    def visit_param_spec(self, t: ParamSpecType) -> bool:
+        return True
+
+
+def has_param_specs(typ: Type) -> bool:
+    return typ.accept(HasParamSpecs())
 
 
 class HasRecursiveType(TypeQuery[bool]):

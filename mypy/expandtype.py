@@ -25,7 +25,6 @@ from mypy.types import (
     TypeList,
     TypeType,
     TypeVarId,
-    TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
     TypeVisitor,
@@ -34,6 +33,8 @@ from mypy.types import (
     UnionType,
     UnpackType,
     get_proper_type,
+    has_param_specs,
+    has_type_vars,
 )
 from mypy.typevartuples import split_with_instance, split_with_prefix_and_suffix
 
@@ -106,16 +107,12 @@ def freshen_function_type_vars(callee: F) -> F:
         tvs = []
         tvmap: dict[TypeVarId, Type] = {}
         for v in callee.variables:
-            if isinstance(v, TypeVarType):
-                tv: TypeVarLikeType = TypeVarType.new_unification_variable(v)
-            elif isinstance(v, TypeVarTupleType):
-                assert isinstance(v, TypeVarTupleType)
-                tv = TypeVarTupleType.new_unification_variable(v)
-            else:
-                assert isinstance(v, ParamSpecType)
-                tv = ParamSpecType.new_unification_variable(v)
+            # TODO(PEP612): fix for ParamSpecType
+            tv = v.new_unification_variable(v)
+            if isinstance(tv.default, tv.__class__):
+                tv.default = tvmap[tv.default.id]
             tvs.append(tv)
-            tvmap[v.id] = tv
+            tvmap[tv.id] = tv
         fresh = cast(CallableType, expand_type(callee, tvmap)).copy_modified(variables=tvs)
         return cast(F, fresh)
     else:
@@ -131,6 +128,7 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def __init__(self, variables: Mapping[TypeVarId, Type]) -> None:
         self.variables = variables
+        self.recursive_guard: set[Type] = set()
 
     def visit_unbound_type(self, t: UnboundType) -> Type:
         return t
@@ -160,7 +158,16 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def visit_type_var(self, t: TypeVarType) -> Type:
         repl = self.variables.get(t.id, t)
-        if isinstance(repl, ProperType) and isinstance(repl, Instance):
+
+        if has_type_vars(repl):
+            if repl in self.recursive_guard:
+                return repl
+            self.recursive_guard.add(repl)
+            repl = repl.accept(self)
+            if t.has_default():
+                repl = t.copy_modified(default=repl)
+
+        if isinstance(repl, Instance):
             # TODO: do we really need to do this?
             # If I try to remove this special-casing ~40 tests fail on reveal_type().
             return repl.copy_modified(last_known_value=None)
@@ -168,6 +175,15 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
 
     def visit_param_spec(self, t: ParamSpecType) -> Type:
         repl = get_proper_type(self.variables.get(t.id, t))
+
+        if has_param_specs(repl):
+            if repl in self.recursive_guard:
+                return repl
+            self.recursive_guard.add(repl)
+            repl = repl.accept(self)
+            if t.has_default():
+                repl = t.copy_modified(default=repl)
+
         if isinstance(repl, Instance):
             # TODO: what does prefix mean in this case?
             # TODO: why does this case even happen? Instances aren't plural.
@@ -349,10 +365,7 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
         return t.copy_modified(args=self.expand_types(t.args))
 
     def expand_types(self, types: Iterable[Type]) -> list[Type]:
-        a: list[Type] = []
-        for t in types:
-            a.append(t.accept(self))
-        return a
+        return [t.accept(self) for t in types]
 
 
 def expand_unpack_with_variables(

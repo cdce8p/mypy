@@ -3886,9 +3886,22 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         tp = get_proper_type(tp)
 
         if isinstance(tp, CallableType):
-            if len(tp.variables) != len(args):
-                self.msg.incompatible_type_application(len(tp.variables), len(args), ctx)
-                return AnyType(TypeOfAny.from_error)
+            if isinstance(ctx, TypeApplication) and isinstance(ctx.expr, NameExpr):
+                if isinstance(ctx.expr.node, TypeAlias) and isinstance(
+                    ctx.expr.node.target, Instance
+                ):
+                    type_vars = ctx.expr.node.target.type.defn.type_vars
+                elif isinstance(ctx.expr.node, TypeInfo):
+                    type_vars = ctx.expr.node.defn.type_vars
+                else:
+                    type_vars = []
+
+                remaining = len(args) - len(tp.variables)
+                if remaining < 0:
+                    args = tuple(list(args) + [tv.default for tv in type_vars[remaining:]])
+            # if len(tp.variables) != len(args):
+            #     self.msg.incompatible_type_application(len(tp.variables), len(args), ctx)
+            #     return AnyType(TypeOfAny.from_error)
             return self.apply_generic_arguments(tp, args, ctx)
         if isinstance(tp, Overloaded):
             for it in tp.items:
@@ -3949,7 +3962,9 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         # Used for list and set expressions, as well as for tuples
         # containing star expressions that don't refer to a
         # Tuple. (Note: "lst" stands for list-set-tuple. :-)
-        tv = TypeVarType("T", "T", -1, [], self.object_type())
+        tv = TypeVarType(
+            "T", "T", -1, [], self.object_type(), AnyType(TypeOfAny.from_omitted_generics)
+        )
         constructor = CallableType(
             [tv],
             [nodes.ARG_STAR],
@@ -4116,8 +4131,12 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                     tup.column = value.column
                 args.append(tup)
         # Define type variables (used in constructors below).
-        kt = TypeVarType("KT", "KT", -1, [], self.object_type())
-        vt = TypeVarType("VT", "VT", -2, [], self.object_type())
+        kt = TypeVarType(
+            "KT", "KT", -1, [], self.object_type(), AnyType(TypeOfAny.from_omitted_generics)
+        )
+        vt = TypeVarType(
+            "VT", "VT", -2, [], self.object_type(), AnyType(TypeOfAny.from_omitted_generics)
+        )
         rv = None
         # Call dict(*args), unless it's empty and stargs is not.
         if args or not stargs:
@@ -4475,7 +4494,9 @@ class ExpressionChecker(ExpressionVisitor[Type]):
 
             # Infer the type of the list comprehension by using a synthetic generic
             # callable type.
-            tv = TypeVarType("T", "T", -1, [], self.object_type())
+            tv = TypeVarType(
+                "T", "T", -1, [], self.object_type(), AnyType(TypeOfAny.from_omitted_generics)
+            )
             tv_list: list[Type] = [tv]
             constructor = CallableType(
                 tv_list,
@@ -4495,8 +4516,12 @@ class ExpressionChecker(ExpressionVisitor[Type]):
 
             # Infer the type of the list comprehension by using a synthetic generic
             # callable type.
-            ktdef = TypeVarType("KT", "KT", -1, [], self.object_type())
-            vtdef = TypeVarType("VT", "VT", -2, [], self.object_type())
+            ktdef = TypeVarType(
+                "KT", "KT", -1, [], self.object_type(), AnyType(TypeOfAny.from_omitted_generics)
+            )
+            vtdef = TypeVarType(
+                "VT", "VT", -2, [], self.object_type(), AnyType(TypeOfAny.from_omitted_generics)
+            )
             constructor = CallableType(
                 [ktdef, vtdef],
                 [nodes.ARG_POS, nodes.ARG_POS],

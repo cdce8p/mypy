@@ -539,6 +539,7 @@ class NamedTupleAnalyzer:
             self.api.tvar_scope.new_unique_func_id(),
             [],
             info.tuple_type,
+            AnyType(TypeOfAny.from_omitted_generics),
         )
         selftype = tvd
 
@@ -607,7 +608,11 @@ class NamedTupleAnalyzer:
         )
 
         self_tvar_expr = TypeVarExpr(
-            SELF_TVAR_NAME, info.fullname + "." + SELF_TVAR_NAME, [], info.tuple_type
+            SELF_TVAR_NAME,
+            info.fullname + "." + SELF_TVAR_NAME,
+            [],
+            info.tuple_type,
+            AnyType(TypeOfAny.from_omitted_generics),
         )
         info.names[SELF_TVAR_NAME] = SymbolTableNode(MDEF, self_tvar_expr)
         return info

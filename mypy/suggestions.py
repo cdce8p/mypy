@@ -278,7 +278,7 @@ class SuggestionEngine:
             callsites, _ = self.get_callsites(node)
 
         return "\n".join(
-            dedup(
+            dict.fromkeys(
                 [
                     f"{path}:{line}: {self.format_args(arg_kinds, arg_names, arg_types)}"
                     for path, line, arg_kinds, _, arg_names, arg_types in callsites

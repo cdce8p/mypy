@@ -16,6 +16,7 @@ from mypy.types import (
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
+    UninhabitedType,
     UnpackType,
     get_proper_type,
 )
@@ -85,7 +86,7 @@ def apply_generic_arguments(
     bound or constraints, instead of giving an error.
     """
     tvars = callable.variables
-    assert len(tvars) == len(orig_types)
+    # assert len(tvars) == len(orig_types)
     # Check that inferred type variable values are compatible with allowed
     # values and bounds.  Also, promote subtype values to allowed values.
     # Create a map from type variable id to target type.
@@ -99,7 +100,16 @@ def apply_generic_arguments(
         target_type = get_target_type(
             tvar, type, callable, report_incompatible_typevar_value, context, skip_unsatisfied
         )
-        if target_type is not None:
+        if isinstance(target_type, UninhabitedType) and tvar.has_default():
+            if isinstance(tvar.default, TypeVarLikeType):
+                id_to_type[tvar.id] = id_to_type[tvar.default.id]
+            else:
+                id_to_type[tvar.id] = tvar.default
+        elif isinstance(target_type, TypeVarLikeType) and isinstance(
+            target_type.default, TypeVarLikeType
+        ):
+            id_to_type[target_type.id] = id_to_type[target_type.default.id]
+        elif target_type is not None:
             id_to_type[tvar.id] = target_type
 
     param_spec = callable.param_spec()

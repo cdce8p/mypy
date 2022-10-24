@@ -10,6 +10,7 @@ from typing_extensions import Final, Protocol
 
 from mypy import errorcodes as codes, message_registry, nodes
 from mypy.errorcodes import ErrorCode
+from mypy.expandtype import expand_type
 from mypy.exprtotype import TypeTranslationError, expr_to_unanalyzed_type
 from mypy.messages import MessageBuilder, format_type_bare, quote_type_string, wrong_type_arg_count
 from mypy.nodes import (
@@ -295,6 +296,7 @@ class TypeAnalyser(SyntheticTypeVisitor[Type], TypeAnalyzerPluginInterface):
                     tvar_def.id,
                     tvar_def.flavor,
                     tvar_def.upper_bound,
+                    tvar_def.default,
                     line=t.line,
                     column=t.column,
                 )
@@ -318,6 +320,7 @@ class TypeAnalyser(SyntheticTypeVisitor[Type], TypeAnalyzerPluginInterface):
                     tvar_def.id,
                     tvar_def.values,
                     tvar_def.upper_bound,
+                    tvar_def.default,
                     tvar_def.variance,
                     line=t.line,
                     column=t.column,
@@ -1429,6 +1432,7 @@ class TypeAnalyser(SyntheticTypeVisitor[Type], TypeAnalyzerPluginInterface):
                 var_def.id.raw_id,
                 self.anal_array(var_def.values),
                 var_def.upper_bound.accept(self),
+                var_def.default.accept(self),
                 var_def.variance,
                 var_def.line,
             )
@@ -1554,6 +1558,7 @@ def fix_instance(
     note: MsgCallback,
     disallow_any: bool,
     python_version: tuple[int, int],
+    # tv_scope: TypeVarLikeScope,
     use_generic_error: bool = False,
     unexpanded_type: Type | None = None,
 ) -> None:
@@ -1561,17 +1566,20 @@ def fix_instance(
 
     Also emit a suitable error if this is not due to implicit Any's.
     """
+
+    if any(tv.has_default() for tv in t.type.defn.type_vars):
+        fixed = expand_type(t, {tv.id: t for tv, t in zip(t.type.defn.type_vars, t.args)})
+        assert isinstance(fixed, Instance)
+        t.args = fixed.args
+        return
     if len(t.args) == 0:
-        if use_generic_error:
-            fullname: str | None = None
-        else:
-            fullname = t.type.fullname
+        fullname = None if use_generic_error else t.type.fullname
         any_type = get_omitted_any(
             disallow_any, fail, note, t, python_version, fullname, unexpanded_type
         )
+
         t.args = (any_type,) * len(t.type.type_vars)
         return
-    # Invalid number of type parameters.
     fail(
         wrong_type_arg_count(len(t.type.type_vars), str(len(t.args)), t.type.name),
         t,
@@ -1634,15 +1642,15 @@ def expand_type_alias(
         tp.line = ctx.line
         tp.column = ctx.column
         return tp
-    if act_len != exp_len:
-        if use_standard_error:
-            # This is used if type alias is an internal representation of another type,
-            # for example a generic TypedDict or NamedTuple.
-            msg = wrong_type_arg_count(exp_len, str(act_len), node.name)
-        else:
-            msg = f"Bad number of arguments for type alias, expected: {exp_len}, given: {act_len}"
-        fail(msg, ctx, code=codes.TYPE_ARG)
-        return set_any_tvars(node, ctx.line, ctx.column, from_error=True)
+    # if act_len != exp_len:
+    #     if use_standard_error:
+    #         # This is used if type alias is an internal representation of another type,
+    #         # for example a generic TypedDict or NamedTuple.
+    #         msg = wrong_type_arg_count(exp_len, str(act_len), node.name)
+    #     else:
+    #         msg = f"Bad number of arguments for type alias, expected: {exp_len}, given: {act_len}"
+    #     fail(msg, ctx, code=codes.TYPE_ARG)
+    #     return set_any_tvars(node, ctx.line, ctx.column, from_error=True)
     typ = TypeAliasType(node, args, ctx.line, ctx.column)
     assert typ.alias is not None
     # HACK: Implement FlexibleAlias[T, typ] by expanding it to typ here.
@@ -1690,15 +1698,9 @@ def set_any_tvars(
     return TypeAliasType(node, [any_type] * len(node.alias_tvars), newline, newcolumn)
 
 
-def remove_dups(tvars: Iterable[T]) -> list[T]:
+def remove_dups(iterable: Iterable[T]) -> list[T]:
     # Get unique elements in order of appearance
-    all_tvars: set[T] = set()
-    new_tvars: list[T] = []
-    for t in tvars:
-        if t not in all_tvars:
-            new_tvars.append(t)
-            all_tvars.add(t)
-    return new_tvars
+    return list(dict.fromkeys(iterable))
 
 
 def flatten_tvars(ll: Iterable[list[T]]) -> list[T]:
