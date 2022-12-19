@@ -128,7 +128,10 @@ def freshen_function_type_vars(callee: F) -> F:
         for v in callee.variables:
             tv = v.new_unification_variable(v)
             if isinstance(tv.default, tv.__class__):
-                tv.default = tvmap[tv.default.id]
+                try:
+                    tv.default = tvmap[tv.default.id]
+                except KeyError:
+                    tv.default = tv.default.default
             tvs.append(tv)
             tvmap[tv.id] = tv
         fresh = expand_type(callee, tvmap).copy_modified(variables=tvs)
@@ -228,8 +231,8 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
             t = t.copy_modified(upper_bound=t.upper_bound.accept(self))
         repl = self.variables.get(t.id, t)
 
-        if has_type_vars(repl):
-            if repl in self.recursive_guard:
+        if has_type_vars(repl) and not isinstance(repl, TypeVarType):
+            if repl in self.recursive_guard or isinstance(repl, TypeVarType):
                 return repl
             self.recursive_guard.add(repl)
             repl = repl.accept(self)

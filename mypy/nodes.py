@@ -2582,6 +2582,7 @@ class TypeVarTupleExpr(TypeVarLikeExpr):
     __slots__ = "tuple_fallback"
 
     tuple_fallback: mypy.types.Instance
+    default: mypy.types.UnpackType | mypy.types.AnyType  # Unpack or Any
 
     __match_args__ = ("name", "upper_bound", "default")
 

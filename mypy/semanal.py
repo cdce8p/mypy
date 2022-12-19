@@ -1960,7 +1960,7 @@ class SemanticAnalyzer(
                     _, _, default_type_var_name = fullname.rpartition(".")
                     if tvar_expr.default.name == default_type_var_name:
                         tvar_expr.default = type_var
-
+                        # TODO(PEP 696) detect out of order typevars
             tvar_def = self.tvar_scope.get_binding(tvar_expr.fullname)
             if tvar_def is None:
                 tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
@@ -2025,30 +2025,30 @@ class SemanticAnalyzer(
         if sym and isinstance(sym.node, PlaceholderNode):
             self.record_incomplete_ref()
         if not allow_tvt and sym and isinstance(sym.node, ParamSpecExpr):
-            if (
-                sym.fullname
-                and not self.tvar_scope.allow_binding(sym.fullname)
-                and self.tvar_scope.parent
-                and self.tvar_scope.parent.allow_binding(sym.fullname)
-            ):
-                # It's bound by our type variable scope
-                return None
+            # if (
+            #     sym.fullname
+            #     and not self.tvar_scope.allow_binding(sym.fullname)
+            #     and self.tvar_scope.parent
+            #     and self.tvar_scope.parent.allow_binding(sym.fullname)
+            # ):
+            #     # It's bound by our type variable scope
+            #     return None
             return t.name, sym.node
         if allow_tvt and sym and isinstance(sym.node, TypeVarTupleExpr):
-            if (
-                sym.fullname
-                and not self.tvar_scope.allow_binding(sym.fullname)
-                and self.tvar_scope.parent
-                and self.tvar_scope.parent.allow_binding(sym.fullname)
-            ):
-                # It's bound by our type variable scope
-                return None
+            # if (
+            #     sym.fullname
+            #     and not self.tvar_scope.allow_binding(sym.fullname)
+            #     and self.tvar_scope.parent
+            #     and self.tvar_scope.parent.allow_binding(sym.fullname)
+            # ):
+            #     # It's bound by our type variable scope
+            #     return None
             return t.name, sym.node
         if sym is None or not isinstance(sym.node, TypeVarExpr) or allow_tvt:
             return None
-        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
-            # It's bound by our type variable scope
-            return None
+        # elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
+        #     # It's bound by our type variable scope
+        #     return None
         else:
             if isinstance(sym.node.default, sym.node.__class__):
                 return None
@@ -6600,8 +6600,12 @@ class SemanticAnalyzer(
             assert info.tuple_type, "NamedTuple without tuple type"
             fallback = Instance(info, [])
             return TupleType(info.tuple_type.items, fallback=fallback)
+        # print(expr)
         typ = self.expr_to_unanalyzed_type(expr)
-        return self.anal_type(typ, **kwargs)
+        # print("type", typ)
+        analised = self.anal_type(typ, **kwargs)
+        # print(f"{analised=}")
+        return analised
 
     def analyze_type_expr(self, expr: Expression) -> None:
         # There are certain expressions that mypy does not need to semantically analyze,
