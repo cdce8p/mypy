@@ -3502,16 +3502,21 @@ def has_type_vars(typ: Type) -> bool:
     return typ.accept(HasTypeVars())
 
 
-class HasParamSpecs(TypeQuery[bool]):
+class HasParamSpecs(BoolTypeQuery):
     def __init__(self) -> None:
-        super().__init__(any)
+        super().__init__(ANY_STRATEGY)
 
     def visit_param_spec(self, t: ParamSpecType) -> bool:
         return True
 
 
+# Use singleton since this is hot (note: call reset() before using)
+_has_param_specs: Final = HasParamSpecs()
+
+
 def has_param_specs(typ: Type) -> bool:
-    return typ.accept(HasParamSpecs())
+    _has_param_specs.reset()
+    return typ.accept(_has_param_specs)
 
 
 class HasRecursiveType(BoolTypeQuery):
