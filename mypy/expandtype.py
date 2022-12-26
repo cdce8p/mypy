@@ -232,7 +232,7 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
         repl = self.variables.get(t.id, t)
 
         if has_type_vars(repl) and not isinstance(repl, TypeVarType):
-            if repl in self.recursive_guard or isinstance(repl, TypeVarType):
+            if repl in self.recursive_guard or isinstance(repl, (TypeVarType, CallableType)):
                 return repl
             self.recursive_guard.add(repl)
             repl = repl.accept(self)
