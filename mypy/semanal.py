@@ -4152,7 +4152,7 @@ class SemanticAnalyzer(
             type_var.line = call.line
             call.analyzed = type_var
             updated = True
-            self.tvar_scope.bind_new(name, type_var)
+            # self.tvar_scope.bind_new(name, type_var)
         else:
             assert isinstance(call.analyzed, TypeVarExpr)
             updated = (
