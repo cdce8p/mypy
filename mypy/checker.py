@@ -6763,7 +6763,7 @@ class TypeChecker(NodeVisitor[None], CheckerPluginInterface):
         args = [
             remove_instance_last_known_values(arg)
             for arg in args
-            + [tv.default for tv in info.defn.type_vars[len(args) - len(info.defn.type_vars) :]]
+            # + [tv.default for tv in info.defn.type_vars[len(args) - len(info.defn.type_vars) :]]
         ]
         # TODO: assert len(args) == len(info.defn.type_vars)
         return Instance(info, args)
