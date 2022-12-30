@@ -1081,7 +1081,9 @@ class SemanticAnalyzer(
         assert self.type is not None
         info = self.type
         if info.self_type is not None:
-            if has_placeholder(info.self_type.upper_bound):
+            if has_placeholder(info.self_type.upper_bound) or has_placeholder(
+                info.self_type.default
+            ):
                 # Similar to regular (user defined) type variables.
                 self.process_placeholder(
                     None,
