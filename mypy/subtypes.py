@@ -303,6 +303,9 @@ def _is_subtype(
         # ErasedType as we do for non-proper subtyping.
         return True
 
+    if not proper_subtype and isinstance(right, TypeVarType) and right.has_default():
+        return left.accept(SubtypeVisitor(right.default, subtype_context, proper_subtype))
+
     if isinstance(right, UnionType) and not isinstance(left, UnionType):
         # Normally, when 'left' is not itself a union, the only way
         # 'left' can be a subtype of the union 'right' is if it is a

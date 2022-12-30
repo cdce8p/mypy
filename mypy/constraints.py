@@ -328,6 +328,8 @@ def _infer_constraints(
         template = mypy.typeops.make_simplified_union(template.items, keep_erased=True)
     if isinstance(actual, UnionType):
         actual = mypy.typeops.make_simplified_union(actual.items, keep_erased=True)
+    if isinstance(actual, TypeVarType) and actual.has_default():
+        actual = get_proper_type(actual.default)
 
     # Ignore Any types from the type suggestion engine to avoid them
     # causing us to infer Any in situations where a better job could
