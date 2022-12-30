@@ -522,7 +522,7 @@ class TypeVarId:
         return (
             isinstance(other, TypeVarId)
             and self.raw_id == other.raw_id
-            # and self.meta_level == other.meta_level  # TODO this probably breaks a lot of stuff
+            and self.meta_level == other.meta_level  # TODO this probably breaks a lot of stuff
             and self.namespace == other.namespace
         )
 
@@ -530,13 +530,7 @@ class TypeVarId:
         return not (self == other)
 
     def __hash__(self) -> int:
-        return hash(
-            (
-                self.raw_id,
-                # self.meta_level,
-                self.namespace,
-            )
-        )
+        return hash((self.raw_id, self.meta_level, self.namespace))
 
     def is_meta_var(self) -> bool:
         return self.meta_level > 0
@@ -583,7 +577,7 @@ class TypeVarLikeType(ProperType):
     @classmethod
     def new_unification_variable(cls, old: Self) -> Self:
         new_id = TypeVarId.new(meta_level=1)
-        new_id.raw_id = old.id.raw_id
+        # new_id.raw_id = old.id.raw_id
         new_id.namespace = old.id.namespace
         return old.copy_modified(id=new_id)
 

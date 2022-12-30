@@ -133,7 +133,7 @@ def freshen_function_type_vars(callee: F) -> F:
                 except KeyError:
                     tv.default = tv.default.default
             tvs.append(tv)
-            tvmap[tv.id] = tv
+            tvmap[v.id] = tv
         fresh = expand_type(callee, tvmap).copy_modified(variables=tvs)
         return cast(F, fresh)
     else:
