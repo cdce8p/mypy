@@ -251,13 +251,15 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
             self.variables.get(t.id, t.copy_modified(prefix=Parameters([], [], [])))
         )
 
-        if has_param_specs(repl):
-            if repl in self.recursive_guard:
-                return repl
-            self.recursive_guard.add(repl)
-            repl = repl.accept(self)
-            if t.has_default():
-                repl = t.copy_modified(default=repl)
+        while True:
+            if has_param_specs(repl):
+                if repl in self.recursive_guard:
+                    break
+                self.recursive_guard.add(repl)
+                repl = repl.accept(self)
+                if t.has_default():
+                    repl = t.copy_modified(default=repl)
+            break
 
         if isinstance(repl, Instance):
             # TODO: what does prefix mean in this case?
