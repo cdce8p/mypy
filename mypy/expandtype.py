@@ -252,7 +252,7 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
         )
 
         while True:
-            if has_param_specs(repl):
+            if has_param_specs(repl) and not isinstance(repl, (ParamSpecType, Instance)):
                 if repl in self.recursive_guard:
                     break
                 self.recursive_guard.add(repl)
