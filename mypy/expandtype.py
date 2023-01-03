@@ -186,7 +186,7 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
 
     def __init__(self, variables: Mapping[TypeVarId, Type]) -> None:
         self.variables = variables
-        self.recursive_guard: set[Type] = set()
+        self.recursive_guard: set[Type | tuple[int, Type]] = set()
 
     def visit_unbound_type(self, t: UnboundType) -> Type:
         return t
@@ -231,13 +231,11 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
             t = t.copy_modified(upper_bound=t.upper_bound.accept(self))
         repl = self.variables.get(t.id, t)
 
-        if has_type_vars(repl) and not isinstance(repl, (TypeVarType, Instance)):
-            if repl in self.recursive_guard or isinstance(repl, (TypeVarType, CallableType)):
+        if has_type_vars(repl) and not isinstance(repl, Instance):
+            if repl in self.recursive_guard:  # or isinstance(repl, CallableType):
                 return repl
             self.recursive_guard.add(repl)
             repl = repl.accept(self)
-            if t.has_default():
-                repl = t.copy_modified(default=repl)
 
         if isinstance(repl, Instance):
             # TODO: do we really need to do this?
@@ -251,15 +249,11 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
             self.variables.get(t.id, t.copy_modified(prefix=Parameters([], [], [])))
         )
 
-        while True:
-            if has_param_specs(repl) and not isinstance(repl, (ParamSpecType, Instance)):
-                if repl in self.recursive_guard:
-                    break
-                self.recursive_guard.add(repl)
-                repl = repl.accept(self)
-                if t.has_default():
-                    repl = t.copy_modified(default=repl)
-            break
+        if has_param_specs(repl) and not isinstance(repl, Instance):
+            if (t.flavor, repl) in self.recursive_guard:
+                return repl
+            self.recursive_guard.add((t.flavor, repl))
+            repl = repl.accept(self)
 
         if isinstance(repl, Instance):
             # TODO: what does prefix mean in this case?
