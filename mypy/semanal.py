@@ -4154,7 +4154,7 @@ class SemanticAnalyzer(
             type_var.line = call.line
             call.analyzed = type_var
             updated = True
-            # self.tvar_scope.bind_new(name, type_var)
+            # self.tvar_scope.bind_new(name, type_var)  # TODO!
         else:
             assert isinstance(call.analyzed, TypeVarExpr)
             updated = (
@@ -4422,7 +4422,7 @@ class SemanticAnalyzer(
             paramspec_var.line = call.line
             call.analyzed = paramspec_var
             updated = True
-            self.tvar_scope.bind_new(name, paramspec_var)
+            # self.tvar_scope.bind_new(name, paramspec_var)  # TODO!
         else:
             assert isinstance(call.analyzed, ParamSpecExpr)
             updated = default != call.analyzed.default
@@ -4491,6 +4491,7 @@ class SemanticAnalyzer(
             typevartuple_var.line = call.line
             call.analyzed = typevartuple_var
             updated = True
+            # self.tvar_scope.bind_new(name, typevartuple_var)  # TODO!
         else:
             assert isinstance(call.analyzed, TypeVarTupleExpr)
             updated = default != call.analyzed.default

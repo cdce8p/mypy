@@ -38,7 +38,7 @@ from mypy.types import (
     flatten_nested_unions,
     get_proper_type,
     has_param_specs,
-    has_type_vars,
+    has_type_var_like_default,
     split_with_prefix_and_suffix,
 )
 from mypy.typevartuples import split_with_instance
@@ -231,11 +231,13 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
             t = t.copy_modified(upper_bound=t.upper_bound.accept(self))
         repl = self.variables.get(t.id, t)
 
-        if has_type_vars(repl) and not isinstance(repl, Instance):
-            if repl in self.recursive_guard:  # or isinstance(repl, CallableType):
+        if has_type_var_like_default(repl):
+            if repl in self.recursive_guard:
                 return repl
             self.recursive_guard.add(repl)
             repl = repl.accept(self)
+            if isinstance(repl, TypeVarType):
+                repl.default = repl.default.accept(self)
 
         if isinstance(repl, Instance):
             # TODO: do we really need to do this?

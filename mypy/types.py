@@ -3496,6 +3496,30 @@ def has_type_vars(typ: Type) -> bool:
     return typ.accept(HasTypeVars())
 
 
+class HasTypeVarLikeDefault(BoolTypeQuery):
+    def __init__(self) -> None:
+        super().__init__(ANY_STRATEGY)
+        self.skip_alias_target = True
+
+    def visit_type_var(self, t: TypeVarType) -> bool:
+        return t.has_default()
+
+    def visit_type_var_tuple(self, t: TypeVarTupleType) -> bool:
+        return t.has_default()
+
+    def visit_param_spec(self, t: ParamSpecType) -> bool:
+        return t.has_default()
+
+
+# Use singleton since this is hot (note: call reset() before using)
+_has_type_var_like_default: Final = HasTypeVarLikeDefault()
+
+
+def has_type_var_like_default(typ: Type) -> bool:
+    _has_type_var_like_default.reset()
+    return typ.accept(_has_type_var_like_default)
+
+
 class HasParamSpecs(BoolTypeQuery):
     def __init__(self) -> None:
         super().__init__(ANY_STRATEGY)

@@ -2853,6 +2853,7 @@ class TypeInfo(SymbolNode):
         "fallback_to_any",
         "meta_fallback_to_any",
         "type_vars",
+        "has_type_var_default",
         "has_param_spec_type",
         "bases",
         "_promote",
@@ -2957,6 +2958,9 @@ class TypeInfo(SymbolNode):
     # Generic type variable names (full names)
     type_vars: list[str]
 
+    # Whether this class has a TypeVar with a default value
+    has_type_var_default: bool
+
     # Whether this class has a ParamSpec type variable
     has_param_spec_type: bool
 
@@ -3044,6 +3048,7 @@ class TypeInfo(SymbolNode):
         self.defn = defn
         self.module_name = module_name
         self.type_vars = []
+        self.has_type_var_default = False
         self.has_param_spec_type = False
         self.has_type_var_tuple_type = False
         self.bases = []
@@ -3085,6 +3090,8 @@ class TypeInfo(SymbolNode):
         self.has_type_var_tuple_type = False
         if self.defn.type_vars:
             for i, vd in enumerate(self.defn.type_vars):
+                if vd.has_default():
+                    self.has_type_var_default = True
                 if isinstance(vd, mypy.types.ParamSpecType):
                     self.has_param_spec_type = True
                 if isinstance(vd, mypy.types.TypeVarTupleType):
@@ -3280,6 +3287,7 @@ class TypeInfo(SymbolNode):
             "defn": self.defn.serialize(),
             "abstract_attributes": self.abstract_attributes,
             "type_vars": self.type_vars,
+            "has_type_var_default": self.has_type_var_default,
             "has_param_spec_type": self.has_param_spec_type,
             "bases": [b.serialize() for b in self.bases],
             "mro": [c.fullname for c in self.mro],
@@ -3318,6 +3326,7 @@ class TypeInfo(SymbolNode):
         # TODO: Is there a reason to reconstruct ti.subtypes?
         ti.abstract_attributes = [(attr[0], attr[1]) for attr in data["abstract_attributes"]]
         ti.type_vars = data["type_vars"]
+        ti.has_type_var_default = data["has_type_var_default"]
         ti.has_param_spec_type = data["has_param_spec_type"]
         ti.bases = [mypy.types.Instance.deserialize(b) for b in data["bases"]]
         _promote = []
