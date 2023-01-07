@@ -1639,14 +1639,15 @@ class SemanticAnalyzer(
 
         for tvd in tvar_defs:
             if isinstance(tvd, TypeVarType) and any(
-                has_placeholder(t) for t in [tvd.upper_bound, tvd.default] + tvd.values
+                has_placeholder(t) for t in [tvd.upper_bound] + tvd.values
             ):
                 # Some type variable bounds or values are not ready, we need
                 # to re-analyze this class.
                 self.defer()
-            if has_placeholder(tvd.default):
+            if isinstance(tvd, TypeVarLikeType) and has_placeholder(tvd.default):
                 # Placeholder values in TypeVarLikeTypes may get substituted in.
                 # Defer current target until they are ready.
+                self.defer()
                 self.mark_incomplete(defn.name, defn)
                 return
 
