@@ -16,6 +16,7 @@ on:
     - 'test-data/**'
     - '.github/**'
     - 'tox.ini'
+    - 'test-requirements.txt'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
