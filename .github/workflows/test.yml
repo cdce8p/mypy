@@ -68,7 +68,9 @@ jobs:
         source $VENV/bin/activate
     - name: Install tox
       run: |
+        python -c "import pip; print(pip.__version__)"
         python -m pip install -U pip
+        python -c "import pip; print(pip.__version__)"
         pip install --upgrade 'setuptools!=50' tox==4.4.4
     - name: Compiled with mypyc
       if: ${{ matrix.test_mypyc }}
