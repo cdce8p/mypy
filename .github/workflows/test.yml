@@ -76,7 +76,9 @@ jobs:
     - name: Setup tox environment
       run: tox run -e ${{ matrix.toxenv }} --notest
     - name: Test
-      run: tox run -e ${{ matrix.toxenv }} --skip-pkg-install -- ${{ matrix.tox_extra_args }}
+      run: |
+        python -m pip install -U pip
+        tox run -e ${{ matrix.toxenv }} --skip-pkg-install -- ${{ matrix.tox_extra_args }}
 
   python-nightly:
     runs-on: ubuntu-latest
