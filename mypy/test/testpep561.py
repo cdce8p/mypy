@@ -54,6 +54,7 @@ def upgrade_pip(python_executable: str) -> None:
         or (3, 9, 11) <= sys.version_info < (3, 10)
         or (3, 8, 13) <= sys.version_info < (3, 9)
     ):
+        assert False
         return
         # Skip for more recent Python release which come with pip>=21.3.1
         # out of the box - for performance reasons.
