@@ -151,7 +151,7 @@ def func_error_alias2(
 [builtins fixtures/dict.pyi]
 
 [case testTypeVarDefaultsFunctions]
-from typing import TypeVar, ParamSpec, List, Union, Callable, Tuple
+from typing import TypeVar, ParamSpec, List, Union, Callable, Tuple, overload
 from typing_extensions import TypeVarTuple, Unpack
 
 T1 = TypeVar("T1", default=str)
@@ -183,6 +183,14 @@ reveal_type(func_b1(2))  # N: Revealed type is "def (builtins.int, builtins.str)
 def func_c1(x: Union[int, Callable[[Unpack[Ts1]], None]]) -> Tuple[Unpack[Ts1]]: ...
 # reveal_type(func_c1(callback1))  # Revealed type is "builtins.tuple[str]"  # TODO
 # reveal_type(func_c1(2))  # Revealed type is "builtins.tuple[builtins.int, builtins.str]"  # TODO
+
+@overload
+def func_d1(x: int) -> int: ...
+@overload
+def func_d1(x: Union[float, T1]) -> T1: ...
+def func_d1(x): ...
+reveal_type(func_d1(2))  # N: Revealed type is "builtins.int"
+reveal_type(func_d1(2.1))  # N: Revealed type is "builtins.str"
 [builtins fixtures/tuple.pyi]
 
 [case testTypeVarDefaultsClass1]
@@ -415,6 +423,26 @@ def func_c4(
     # reveal_type(l)  # Revealed type is "__main__.ClassC4[builtins.int, builtins.str]"  # TODO
     m = ClassC4[int, float]()
     reveal_type(m)  # N: Revealed type is "__main__.ClassC4[builtins.int, builtins.float]"
+[builtins fixtures/tuple.pyi]
+
+[case testTypeVarDefaultsClass4]
+# flags: --disallow-any-generics
+from typing import Dict, Generic, List, TypeVar, Tuple
+
+T1 = TypeVar("T1", default=str)
+T2 = TypeVar("T2", default=T1)
+T3 = TypeVar("T3", default=Tuple[T2])
+T4 = TypeVar("T4", default=Tuple[T1, T2])
+T5 = TypeVar("T5", default="T5")
+
+class ClassD1(Generic[T1, T2]): ...
+
+# def func_d1(c: ClassD1[int]) -> None:
+#     a = ClassD1[int]()
+#     reveal_type(a)  # Revealed type is "__main__.ClassD1[builtins.int, builtins.int]"
+#     b = ClassD1()
+#     reveal_type(b)  # Revealed type is "__main__.ClassD1[builtins.str, builtins.str]"
+#     reveal_type(c)
 [builtins fixtures/tuple.pyi]
 
 [case testTypeVarDefaultsClassRecursive1]
