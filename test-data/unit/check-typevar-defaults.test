@@ -512,6 +512,32 @@ def func_d3(
     m = ClassD3[int, float]()
     reveal_type(m)  # N: Revealed type is "__main__.ClassD3[builtins.int, builtins.float]"
 
+[case testTypeVarDefaultsClassRecursive2]
+# flags: --disallow-any-generics
+from typing import Generic, ParamSpec
+
+P1 = ParamSpec("P1", default=[int, str])
+P2 = ParamSpec("P2", default=P1)
+P3 = ParamSpec("P3")
+
+class ClassE1(Generic[P1, P2]): ...
+
+def func_e1(
+    a: ClassE1,
+    b: ClassE1[[float]],
+    c: ClassE1[[float], [str]],
+) -> None:
+    reveal_type(a)  # N: Revealed type is "__main__.ClassE1[[builtins.int, builtins.str], [builtins.int, builtins.str]]"
+    reveal_type(b)  # N: Revealed type is "__main__.ClassE1[[builtins.float], [builtins.float]]"
+    reveal_type(c)  # N: Revealed type is "__main__.ClassE1[[builtins.float], [builtins.str]]"
+
+    k = ClassE1()
+    # reveal_type(k)  # Revealed type is "__main__.ClassE1[[builtins.int, builtins.str], [builtins.int, builtins.str]]"  # TODO
+    l = ClassE1[[float]]()
+    reveal_type(l)  # N: Revealed type is "__main__.ClassE1[[builtins.float], [builtins.float]]"
+    m = ClassE1[[float], [str]]()
+    reveal_type(m)  # N: Revealed type is "__main__.ClassE1[[builtins.float], [builtins.str]]"
+
 [case testTypeVarDefaultsClassRecursiveMultipleFiles]
 # flags: --disallow-any-generics
 from typing import Generic, TypeVar

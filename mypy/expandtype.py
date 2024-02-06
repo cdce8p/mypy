@@ -242,6 +242,14 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
         # Set prefix to something empty, so we don't duplicate it below.
         repl = self.variables.get(t.id, t.copy_modified(prefix=Parameters([], [], [])))
         if isinstance(repl, ParamSpecType):
+            if (tvar_id := repl.id) in self.recursive_tvar_guard:
+                return self.recursive_tvar_guard[tvar_id] or repl
+            self.recursive_tvar_guard[tvar_id] = None
+            repl = repl.accept(self)
+            if isinstance(repl, ParamSpecType):
+                repl.default = repl.default.accept(self)
+            self.recursive_tvar_guard[tvar_id] = repl
+        if isinstance(repl, ParamSpecType):
             return repl.copy_modified(
                 flavor=t.flavor,
                 prefix=t.prefix.copy_modified(
