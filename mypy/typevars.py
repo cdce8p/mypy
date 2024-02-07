@@ -3,13 +3,11 @@ from __future__ import annotations
 from mypy.erasetype import erase_typevars
 from mypy.nodes import TypeInfo
 from mypy.types import (
-    AnyType,
     Instance,
     ParamSpecType,
     ProperType,
     TupleType,
     Type,
-    TypeOfAny,
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
@@ -64,16 +62,7 @@ def fill_typevars(typ: TypeInfo) -> Instance | TupleType:
 
 def fill_typevars_with_any(typ: TypeInfo) -> Instance | TupleType:
     """Apply a correct number of Any's as type arguments to a type."""
-    args: list[Type] = []
-    for tv in typ.defn.type_vars:
-        # Valid erasure for *Ts is *tuple[Any, ...], not just Any.
-        if isinstance(tv, TypeVarTupleType):
-            args.append(
-                UnpackType(tv.tuple_fallback.copy_modified(args=[AnyType(TypeOfAny.special_form)]))
-            )
-        else:
-            args.append(AnyType(TypeOfAny.special_form))
-    inst = Instance(typ, args)
+    inst = Instance(typ, [tv.default for tv in typ.defn.type_vars])
     if typ.tuple_type is None:
         return inst
     erased_tuple_type = erase_typevars(typ.tuple_type, {tv.id for tv in typ.defn.type_vars})

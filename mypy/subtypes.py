@@ -626,8 +626,9 @@ class SubtypeVisitor(TypeVisitor[bool]):
             if call:
                 return self._is_subtype(call, right)
             return False
-        else:
-            return False
+        if isinstance(right, TypeVarType) and right.has_default():
+            return self._is_subtype(left, right.default)
+        return False
 
     def visit_type_var(self, left: TypeVarType) -> bool:
         right = self.right
@@ -635,6 +636,9 @@ class SubtypeVisitor(TypeVisitor[bool]):
             return True
         if left.values and self._is_subtype(UnionType.make_union(left.values), right):
             return True
+        if left.has_default():
+            # Check if correct!
+            return self._is_subtype(left.default, self.right)
         return self._is_subtype(left.upper_bound, self.right)
 
     def visit_param_spec(self, left: ParamSpecType) -> bool:

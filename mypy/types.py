@@ -515,13 +515,14 @@ class TypeVarId:
         return TypeVarId(raw_id, meta_level)
 
     def __repr__(self) -> str:
+        # return f"TypeVarId({self.raw_id}, {self.meta_level}, {self.namespace})"
         return self.raw_id.__repr__()
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, TypeVarId)
             and self.raw_id == other.raw_id
-            and self.meta_level == other.meta_level
+            and self.meta_level == other.meta_level  # TODO this probably breaks a lot of stuff
             and self.namespace == other.namespace
         )
 
@@ -576,6 +577,8 @@ class TypeVarLikeType(ProperType):
     @classmethod
     def new_unification_variable(cls, old: Self) -> Self:
         new_id = TypeVarId.new(meta_level=1)
+        # new_id.raw_id = old.id.raw_id
+        new_id.namespace = old.id.namespace
         return old.copy_modified(id=new_id)
 
     def has_default(self) -> bool:
@@ -3183,7 +3186,7 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
 
         if t.args:
             if t.type.fullname == "builtins.tuple":
-                assert len(t.args) == 1
+                # assert len(t.args) == 1
                 s += f"[{self.list_str(t.args)}, ...]"
             else:
                 s += f"[{self.list_str(t.args)}]"
@@ -3491,6 +3494,47 @@ class HasTypeVars(BoolTypeQuery):
 def has_type_vars(typ: Type) -> bool:
     """Check if a type contains any type variables (recursively)."""
     return typ.accept(HasTypeVars())
+
+
+class HasTypeVarLikeDefault(BoolTypeQuery):
+    def __init__(self) -> None:
+        super().__init__(ANY_STRATEGY)
+        self.skip_alias_target = True
+
+    def visit_type_var(self, t: TypeVarType) -> bool:
+        return t.has_default()
+
+    def visit_type_var_tuple(self, t: TypeVarTupleType) -> bool:
+        return t.has_default()
+
+    def visit_param_spec(self, t: ParamSpecType) -> bool:
+        return t.has_default()
+
+
+# Use singleton since this is hot (note: call reset() before using)
+_has_type_var_like_default: Final = HasTypeVarLikeDefault()
+
+
+def has_type_var_like_default(typ: Type) -> bool:
+    _has_type_var_like_default.reset()
+    return typ.accept(_has_type_var_like_default)
+
+
+class HasParamSpecs(BoolTypeQuery):
+    def __init__(self) -> None:
+        super().__init__(ANY_STRATEGY)
+
+    def visit_param_spec(self, t: ParamSpecType) -> bool:
+        return True
+
+
+# Use singleton since this is hot (note: call reset() before using)
+_has_param_specs: Final = HasParamSpecs()
+
+
+def has_param_specs(typ: Type) -> bool:
+    _has_param_specs.reset()
+    return typ.accept(_has_param_specs)
 
 
 class HasRecursiveType(BoolTypeQuery):

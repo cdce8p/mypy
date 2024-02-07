@@ -6750,8 +6750,8 @@ class TypeChecker(NodeVisitor[None], CheckerPluginInterface):
             assert isinstance(node.target, Instance)  # type: ignore[misc]
             node = node.target.type
         assert isinstance(node, TypeInfo)
-        any_type = AnyType(TypeOfAny.from_omitted_generics)
-        return Instance(node, [any_type] * len(node.defn.type_vars))
+
+        return Instance(node, [type_var.default for type_var in node.defn.type_vars])
 
     def named_generic_type(self, name: str, args: list[Type]) -> Instance:
         """Return an instance with the given name and type arguments.
@@ -6760,7 +6760,11 @@ class TypeChecker(NodeVisitor[None], CheckerPluginInterface):
         the name refers to a compatible generic type.
         """
         info = self.lookup_typeinfo(name)
-        args = [remove_instance_last_known_values(arg) for arg in args]
+        args = [
+            remove_instance_last_known_values(arg)
+            for arg in args
+            # + [tv.default for tv in info.defn.type_vars[len(args) - len(info.defn.type_vars) :]]
+        ]
         # TODO: assert len(args) == len(info.defn.type_vars)
         return Instance(info, args)
 

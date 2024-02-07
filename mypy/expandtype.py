@@ -37,6 +37,8 @@ from mypy.types import (
     UnpackType,
     flatten_nested_unions,
     get_proper_type,
+    has_param_specs,
+    has_type_var_like_default,
     split_with_prefix_and_suffix,
 )
 from mypy.typevartuples import split_with_instance
@@ -125,6 +127,11 @@ def freshen_function_type_vars(callee: F) -> F:
         tvmap: dict[TypeVarId, Type] = {}
         for v in callee.variables:
             tv = v.new_unification_variable(v)
+            if isinstance(tv.default, tv.__class__):
+                try:
+                    tv.default = tvmap[tv.default.id]
+                except KeyError:
+                    tv.default = tv.default.default
             tvs.append(tv)
             tvmap[v.id] = tv
         fresh = expand_type(callee, tvmap).copy_modified(variables=tvs)
@@ -179,6 +186,7 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
 
     def __init__(self, variables: Mapping[TypeVarId, Type]) -> None:
         self.variables = variables
+        self.recursive_guard: set[Type | tuple[int, Type]] = set()
 
     def visit_unbound_type(self, t: UnboundType) -> Type:
         return t
@@ -222,15 +230,37 @@ class ExpandTypeVisitor(TrivialSyntheticTypeTranslator):
         if t.id.raw_id == 0:
             t = t.copy_modified(upper_bound=t.upper_bound.accept(self))
         repl = self.variables.get(t.id, t)
-        if isinstance(repl, ProperType) and isinstance(repl, Instance):
+
+        if has_type_var_like_default(repl):
+            if repl in self.recursive_guard:
+                return repl
+            self.recursive_guard.add(repl)
+            repl = repl.accept(self)
+            if isinstance(repl, TypeVarType):
+                repl.default = repl.default.accept(self)
+
+        if isinstance(repl, Instance):
             # TODO: do we really need to do this?
             # If I try to remove this special-casing ~40 tests fail on reveal_type().
             return repl.copy_modified(last_known_value=None)
         return repl
 
     def visit_param_spec(self, t: ParamSpecType) -> Type:
-        # Set prefix to something empty, so we don't duplicate it below.
-        repl = self.variables.get(t.id, t.copy_modified(prefix=Parameters([], [], [])))
+        # Set prefix to something empty so we don't duplicate below.
+        repl = get_proper_type(
+            self.variables.get(t.id, t.copy_modified(prefix=Parameters([], [], [])))
+        )
+
+        if has_param_specs(repl) and not isinstance(repl, Instance):
+            if (t.flavor, repl) in self.recursive_guard:
+                return repl
+            self.recursive_guard.add((t.flavor, repl))
+            repl = repl.accept(self)
+
+        if isinstance(repl, Instance):
+            # TODO: what does prefix mean in this case?
+            # TODO: why does this case even happen? Instances aren't plural.
+            return repl
         if isinstance(repl, ParamSpecType):
             return repl.copy_modified(
                 flavor=t.flavor,

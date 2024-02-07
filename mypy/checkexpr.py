@@ -2542,6 +2542,11 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                     callee_arg_kind,
                     allow_unpack=isinstance(callee_arg_type, UnpackType),
                 )
+                if (
+                    isinstance(callee_arg_type, types.TypeVarType)
+                    and callee_arg_type.has_default()
+                ):
+                    callee_arg_type = callee_arg_type.default
                 check_arg(
                     expanded_actual,
                     actual_type,

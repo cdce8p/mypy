@@ -65,6 +65,7 @@ from mypy.types import (
     TypedDictType,
     TypeOfAny,
     TypeType,
+    TypeVarId,
     TypeVarLikeType,
     TypeVarTupleType,
     TypeVarType,
@@ -217,6 +218,8 @@ def _analyze_member_access(
     # TODO: This and following functions share some logic with subtypes.find_member;
     #       consider refactoring.
     typ = get_proper_type(typ)
+    # if name == "Bar":
+    #     print("here")
     if isinstance(typ, Instance):
         return analyze_instance_member_access(name, typ, mx, override_info)
     elif isinstance(typ, AnyType):
@@ -397,6 +400,17 @@ def analyze_type_callable_member_access(name: str, typ: FunctionLike, mx: Member
                 ret_type, name, mx, original_vars=typ.items[0].variables, mcs_fallback=typ.fallback
             )
             if result:
+                if isinstance(result, CallableType):
+                    from mypy.expandtype import expand_type
+
+                    env: dict[TypeVarId, TypeVarLikeType] = {t.id: t for t in result.variables}
+                    env.update(
+                        {
+                            t.id: type_
+                            for t, type_ in zip(ret_type.type.defn.type_vars, ret_type.args)
+                        }
+                    )
+                    return expand_type(result, env)
                 return result
         # Look up from the 'type' type.
         return _analyze_member_access(name, typ.fallback, mx)

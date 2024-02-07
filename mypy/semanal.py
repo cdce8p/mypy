@@ -1081,7 +1081,9 @@ class SemanticAnalyzer(
         assert self.type is not None
         info = self.type
         if info.self_type is not None:
-            if has_placeholder(info.self_type.upper_bound):
+            if has_placeholder(info.self_type.upper_bound) or has_placeholder(
+                info.self_type.default
+            ):
                 # Similar to regular (user defined) type variables.
                 self.process_placeholder(
                     None,
@@ -1642,9 +1644,10 @@ class SemanticAnalyzer(
                 # Some type variable bounds or values are not ready, we need
                 # to re-analyze this class.
                 self.defer()
-            if has_placeholder(tvd.default):
+            if isinstance(tvd, TypeVarLikeType) and has_placeholder(tvd.default):
                 # Placeholder values in TypeVarLikeTypes may get substituted in.
                 # Defer current target until they are ready.
+                self.defer()
                 self.mark_incomplete(defn.name, defn)
                 return
 
@@ -1954,7 +1957,16 @@ class SemanticAnalyzer(
             del base_type_exprs[i]
         tvar_defs: list[TypeVarLikeType] = []
         for name, tvar_expr in declared_tvars:
-            tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
+            if isinstance(tvar_expr.default, UnboundType):
+                # assumption here is that the names cannot be duplicated
+                for fullname, type_var in self.tvar_scope.scope.items():
+                    _, _, default_type_var_name = fullname.rpartition(".")
+                    if tvar_expr.default.name == default_type_var_name:
+                        tvar_expr.default = type_var
+                        # TODO(PEP 696) detect out of order typevars
+            tvar_def = self.tvar_scope.get_binding(tvar_expr.fullname)
+            if tvar_def is None:
+                tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
             tvar_defs.append(tvar_def)
         return base_type_exprs, tvar_defs, is_protocol
 
@@ -2016,21 +2028,33 @@ class SemanticAnalyzer(
         if sym and isinstance(sym.node, PlaceholderNode):
             self.record_incomplete_ref()
         if not allow_tvt and sym and isinstance(sym.node, ParamSpecExpr):
-            if sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
-                # It's bound by our type variable scope
-                return None
+            # if (
+            #     sym.fullname
+            #     and not self.tvar_scope.allow_binding(sym.fullname)
+            #     and self.tvar_scope.parent
+            #     and self.tvar_scope.parent.allow_binding(sym.fullname)
+            # ):
+            #     # It's bound by our type variable scope
+            #     return None
             return t.name, sym.node
         if allow_tvt and sym and isinstance(sym.node, TypeVarTupleExpr):
-            if sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
-                # It's bound by our type variable scope
-                return None
+            # if (
+            #     sym.fullname
+            #     and not self.tvar_scope.allow_binding(sym.fullname)
+            #     and self.tvar_scope.parent
+            #     and self.tvar_scope.parent.allow_binding(sym.fullname)
+            # ):
+            #     # It's bound by our type variable scope
+            #     return None
             return t.name, sym.node
         if sym is None or not isinstance(sym.node, TypeVarExpr) or allow_tvt:
             return None
-        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
-            # It's bound by our type variable scope
-            return None
+        # elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
+        #     # It's bound by our type variable scope
+        #     return None
         else:
+            if isinstance(sym.node.default, sym.node.__class__):
+                return None
             assert isinstance(sym.node, TypeVarExpr)
             return t.name, sym.node
 
@@ -4131,6 +4155,7 @@ class SemanticAnalyzer(
             type_var.line = call.line
             call.analyzed = type_var
             updated = True
+            # self.tvar_scope.bind_new(name, type_var)  # TODO!
         else:
             assert isinstance(call.analyzed, TypeVarExpr)
             updated = (
@@ -4139,6 +4164,7 @@ class SemanticAnalyzer(
                 or default != call.analyzed.default
             )
             call.analyzed.upper_bound = upper_bound
+            call.analyzed.default = default
             call.analyzed.values = values
             call.analyzed.default = default
         if any(has_placeholder(v) for v in values):
@@ -4281,6 +4307,8 @@ class SemanticAnalyzer(
                 allow_unbound_tvars=allow_unbound_tvars,
                 allow_param_spec_literals=allow_param_spec_literals,
                 allow_unpack=allow_unpack,
+                tvar_scope=self.tvar_scope,
+                allow_tuple_literal=True,
             )
             if analyzed is None:
                 # Type variables are special: we need to place them in the symbol table
@@ -4395,6 +4423,7 @@ class SemanticAnalyzer(
             paramspec_var.line = call.line
             call.analyzed = paramspec_var
             updated = True
+            # self.tvar_scope.bind_new(name, paramspec_var)  # TODO!
         else:
             assert isinstance(call.analyzed, ParamSpecExpr)
             updated = default != call.analyzed.default
@@ -4463,6 +4492,7 @@ class SemanticAnalyzer(
             typevartuple_var.line = call.line
             call.analyzed = typevartuple_var
             updated = True
+            # self.tvar_scope.bind_new(name, typevartuple_var)  # TODO!
         else:
             assert isinstance(call.analyzed, TypeVarTupleExpr)
             updated = default != call.analyzed.default
@@ -4968,9 +4998,10 @@ class SemanticAnalyzer(
 
     def bind_name_expr(self, expr: NameExpr, sym: SymbolTableNode) -> None:
         """Bind name expression to a symbol table node."""
-        if isinstance(sym.node, TypeVarExpr) and self.tvar_scope.get_binding(sym):
-            self.fail(f'"{expr.name}" is a type variable and only valid in type context', expr)
-        elif isinstance(sym.node, PlaceholderNode):
+        # TODO renenable this check, its fine for defaults
+        # if isinstance(sym.node, TypeVarExpr) and self.tvar_scope.get_binding(sym):
+        #     self.fail(f'"{expr.name}" is a type variable and only valid in type context', expr)
+        if isinstance(sym.node, PlaceholderNode):
             self.process_placeholder(expr.name, "name", expr)
         else:
             expr.kind = sym.kind
@@ -6551,16 +6582,7 @@ class SemanticAnalyzer(
         except Exception as err:
             report_internal_error(err, self.errors.file, node.line, self.errors, self.options)
 
-    def expr_to_analyzed_type(
-        self,
-        expr: Expression,
-        report_invalid_types: bool = True,
-        allow_placeholder: bool = False,
-        allow_type_any: bool = False,
-        allow_unbound_tvars: bool = False,
-        allow_param_spec_literals: bool = False,
-        allow_unpack: bool = False,
-    ) -> Type | None:
+    def expr_to_analyzed_type(self, expr: Expression, **kwargs: Any) -> Type | None:
         if isinstance(expr, CallExpr):
             # This is a legacy syntax intended mostly for Python 2, we keep it for
             # backwards compatibility, but new features like generic named tuples
@@ -6582,16 +6604,12 @@ class SemanticAnalyzer(
             assert info.tuple_type, "NamedTuple without tuple type"
             fallback = Instance(info, [])
             return TupleType(info.tuple_type.items, fallback=fallback)
+        # print(expr)
         typ = self.expr_to_unanalyzed_type(expr)
-        return self.anal_type(
-            typ,
-            report_invalid_types=report_invalid_types,
-            allow_placeholder=allow_placeholder,
-            allow_type_any=allow_type_any,
-            allow_unbound_tvars=allow_unbound_tvars,
-            allow_param_spec_literals=allow_param_spec_literals,
-            allow_unpack=allow_unpack,
-        )
+        # print("type", typ)
+        analised = self.anal_type(typ, **kwargs)
+        # print(f"{analised=}")
+        return analised
 
     def analyze_type_expr(self, expr: Expression) -> None:
         # There are certain expressions that mypy does not need to semantically analyze,
