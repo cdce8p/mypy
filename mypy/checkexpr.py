@@ -5138,7 +5138,7 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                         return TypedDictType(
                             items=result,
                             required_keys=always_present_keys,
-                            fallback=self.named_type("builtins.dict"),
+                            fallback=self.named_type("typing._TypedDict"),
                         )
             else:
                 typeddict_contexts_2 = cast(List[TypedDictType], typeddict_contexts)
