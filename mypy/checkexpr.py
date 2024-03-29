@@ -5115,9 +5115,7 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         # to avoid the second error, we always return TypedDict type that was requested
         typeddict_contexts = self.find_typeddict_context(self.type_context[-1], e)
         if typeddict_contexts:
-            if len(typeddict_contexts) == 1 and isinstance(
-                get_proper_type(typeddict_contexts[0]), TypeVarType
-            ):
+            if len(typeddict_contexts) == 1 and isinstance(typeddict_contexts[0], TypeVarType):
                 if e.items:
                     result: dict[str, Type] = {}
                     always_present_keys: set[str] = set()
@@ -5143,11 +5141,11 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                             fallback=self.named_type("builtins.dict"),
                         )
             else:
-                typeddict_contexts = cast(list[TypedDictType], typeddict_contexts)
-                if len(typeddict_contexts) == 1:
-                    return self.check_typeddict_literal_in_context(e, typeddict_contexts[0])
+                typeddict_contexts_2 = cast(List[TypedDictType], typeddict_contexts)
+                if len(typeddict_contexts_2) == 1:
+                    return self.check_typeddict_literal_in_context(e, typeddict_contexts_2[0])
                 # Multiple items union, check if at least one of them matches cleanly.
-                for typeddict_context in typeddict_contexts:
+                for typeddict_context in typeddict_contexts_2:
                     with self.msg.filter_errors() as err, self.chk.local_type_map() as tmap:
                         ret_type = self.check_typeddict_literal_in_context(e, typeddict_context)
                     if err.has_new_errors():
@@ -5155,7 +5153,7 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                     self.chk.store_types(tmap)
                     return ret_type
                 # No item matched without an error, so we can't unambiguously choose the item.
-                self.msg.typeddict_context_ambiguous(typeddict_contexts, e)
+                self.msg.typeddict_context_ambiguous(typeddict_contexts_2, e)
 
         # fast path attempt
         dt = self.fast_dict_type(e)
@@ -5259,12 +5257,12 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         if isinstance(context, (TypedDictType, TypeVarType)):
             return [context]
         elif isinstance(context, UnionType):
-            items = []
+            items: list[TypedDictType | TypeVarType] = []
             for item in context.items:
                 item_contexts = self.find_typeddict_context(item, dict_expr)
                 for item_context in item_contexts:
                     if isinstance(
-                        get_proper_type(item_context), TypedDictType
+                        item_context, TypedDictType
                     ) and self.match_typeddict_call_with_dict(
                         item_context, dict_expr.items, dict_expr
                     ):
