@@ -5115,23 +5115,57 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         # to avoid the second error, we always return TypedDict type that was requested
         typeddict_contexts = self.find_typeddict_context(self.type_context[-1], e)
         if typeddict_contexts:
-            if len(typeddict_contexts) == 1:
-                return self.check_typeddict_literal_in_context(e, typeddict_contexts[0])
-            # Multiple items union, check if at least one of them matches cleanly.
-            for typeddict_context in typeddict_contexts:
-                with self.msg.filter_errors() as err, self.chk.local_type_map() as tmap:
-                    ret_type = self.check_typeddict_literal_in_context(e, typeddict_context)
-                if err.has_new_errors():
-                    continue
-                self.chk.store_types(tmap)
-                return ret_type
-            # No item matched without an error, so we can't unambiguously choose the item.
-            self.msg.typeddict_context_ambiguous(typeddict_contexts, e)
+            if len(typeddict_contexts) == 1 and isinstance(
+                get_proper_type(typeddict_contexts[0]), TypeVarType
+            ):
+                if e.items:
+                    result: dict[str, Type] = {}
+                    always_present_keys: set[str] = set()
+
+                    for item_name_expr, item_arg in e.items:
+                        if item_name_expr:
+                            key_type = self.accept(item_name_expr)
+                            values = try_getting_str_literals(item_name_expr, key_type)
+                            literal_value = None
+                            if values and len(values) == 1:
+                                literal_value = values[0]
+                            if literal_value is None:
+                                break
+                            val_type = self.accept(item_arg)
+                            result[literal_value] = val_type
+                            always_present_keys.add(literal_value)
+                        else:
+                            break
+                    else:
+                        return TypedDictType(
+                            items=result,
+                            required_keys=always_present_keys,
+                            fallback=self.named_type("builtins.dict"),
+                        )
+            else:
+                typeddict_contexts = cast(list[TypedDictType], typeddict_contexts)
+                if len(typeddict_contexts) == 1:
+                    return self.check_typeddict_literal_in_context(e, typeddict_contexts[0])
+                # Multiple items union, check if at least one of them matches cleanly.
+                for typeddict_context in typeddict_contexts:
+                    with self.msg.filter_errors() as err, self.chk.local_type_map() as tmap:
+                        ret_type = self.check_typeddict_literal_in_context(e, typeddict_context)
+                    if err.has_new_errors():
+                        continue
+                    self.chk.store_types(tmap)
+                    return ret_type
+                # No item matched without an error, so we can't unambiguously choose the item.
+                self.msg.typeddict_context_ambiguous(typeddict_contexts, e)
 
         # fast path attempt
         dt = self.fast_dict_type(e)
         if dt:
             return dt
+        # td = TypedDictType(
+        #     items={k.value: self.accept(v) for k, v in e.items if isinstance(k, StrExpr)},
+        #     required_keys=set((k.value for k, _ in e.items if isinstance(k, StrExpr))),
+        #     fallback=self.named_type("builtins.dict"),
+        # )
 
         # Define type variables (used in constructors below).
         kt = TypeVarType(
@@ -5173,6 +5207,38 @@ class ExpressionChecker(ExpressionVisitor[Type]):
                 args.append(tup)
                 expected_types.append(TupleType([kt, vt], self.named_type("builtins.tuple")))
 
+        # arg_names: list[str] = []
+        # expected_types_2: list[Type] = []
+        # for key, value in e.items:
+        #     if key is None:
+        #         continue
+        #     else:
+        #         assert isinstance(key, StrExpr)
+        #         arg_names.append(key.value)
+        #         expected_types_2.append(self.accept(value))
+
+        # fallback = (
+        #     self.named_type("typing._TypedDict")
+        #     # or self.api.named_type_or_none("typing_extensions._TypedDict", [])
+        #     # or self.api.named_type_or_none("mypy_extensions._TypedDict", [])
+        # )
+        # td = TypedDictType(
+        #     items={k: v for k, v in zip(arg_names, expected_types_2)},
+        #     required_keys=set(arg_names),
+        #     fallback=self.named_type("builtins.dict"),
+        # )
+        # print(td)
+        # return td
+        # constructor_2 = self.typeddict_callable_from_context(td)
+        # self.check_call(constructor_2, args, [nodes.ARG_POS] * len(args), e)[0]
+
+        # constructor2 = CallableType(
+        #     expected_types_2,
+        #     [nodes.ARG_POS] * len(expected_types_2),
+        #     arg_names,
+
+        # )
+
         # The callable type represents a function like this (except we adjust for **expr):
         #   def <dict>(*v: Tuple[kt, vt]) -> Dict[kt, vt]: ...
         constructor = CallableType(
@@ -5188,16 +5254,18 @@ class ExpressionChecker(ExpressionVisitor[Type]):
 
     def find_typeddict_context(
         self, context: Type | None, dict_expr: DictExpr
-    ) -> list[TypedDictType]:
+    ) -> list[TypedDictType | TypeVarType]:
         context = get_proper_type(context)
-        if isinstance(context, TypedDictType):
+        if isinstance(context, (TypedDictType, TypeVarType)):
             return [context]
         elif isinstance(context, UnionType):
             items = []
             for item in context.items:
                 item_contexts = self.find_typeddict_context(item, dict_expr)
                 for item_context in item_contexts:
-                    if self.match_typeddict_call_with_dict(
+                    if isinstance(
+                        get_proper_type(item_context), TypedDictType
+                    ) and self.match_typeddict_call_with_dict(
                         item_context, dict_expr.items, dict_expr
                     ):
                         items.append(item_context)
