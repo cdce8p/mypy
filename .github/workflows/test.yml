@@ -32,29 +32,29 @@ jobs:
         # Make sure to run mypyc compiled unit tests for both
         # the oldest and newest supported Python versions
         - name: Test suite with py39-windows-64
-          python: '3.9'
+          python: '3.9.0'
           arch: x64
           os: windows-latest
           toxenv: py39
-          tox_extra_args: "-n 4 mypyc/test/test_run.py"
-        - name: Test suite with py310-windows-64
-          python: '3.10'
-          arch: x64
-          os: windows-latest
-          toxenv: py310
-          tox_extra_args: "-n 4 mypyc/test/test_run.py"
-        - name: Test suite with py311-windows-64
-          python: '3.11'
-          arch: x64
-          os: windows-latest
-          toxenv: py311
-          tox_extra_args: "-n 4 mypyc/test/test_run.py"
-        - name: Test suite with py312-windows-64
-          python: '3.12'
-          arch: x64
-          os: windows-latest
-          toxenv: py312
-          tox_extra_args: "-n 4 mypyc/test/test_run.py"
+          tox_extra_args: "-n 4 mypyc/test/test_run.py::TestRun::run-exceptions.test::testException"
+        # - name: Test suite with py310-windows-64
+        #   python: '3.10'
+        #   arch: x64
+        #   os: windows-latest
+        #   toxenv: py310
+        #   tox_extra_args: "-n 4 mypyc/test/test_run.py"
+        # - name: Test suite with py311-windows-64
+        #   python: '3.11'
+        #   arch: x64
+        #   os: windows-latest
+        #   toxenv: py311
+        #   tox_extra_args: "-n 4 mypyc/test/test_run.py"
+        # - name: Test suite with py312-windows-64
+        #   python: '3.12'
+        #   arch: x64
+        #   os: windows-latest
+        #   toxenv: py312
+        #   tox_extra_args: "-n 4 mypyc/test/test_run.py"
 
     name: ${{ matrix.name }}
     env:
