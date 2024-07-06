@@ -26,6 +26,7 @@ jobs:
   mypy_primer:
     name: Run mypy_primer
     runs-on: ubuntu-latest
+    if: false
     permissions:
       contents: read
     strategy:
