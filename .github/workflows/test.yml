@@ -140,6 +140,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - run: |
+        echo "matrix.color: ${{ matrix.color }}"
+        echo "matrix.color || 1: ${{ matrix.color || 1 }}"
+        echo "matrix.color && 1: ${{ matrix.color && 1 }}"
 
     - name: Debug build
       if: ${{ matrix.debug_build }}
