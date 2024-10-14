@@ -115,10 +115,10 @@ def assert_string_arrays_equal(
     if expected != actual:
         expected_ranges, actual_ranges = diff_ranges(expected, actual)
         sys.stderr.write("Expected:\n")
-        red = "\033[31m" if sys.platform != "win32" else None
+        red = "\033[31m"  # if sys.platform != "win32" else None
         render_diff_range(expected_ranges, expected, colour=red)
         sys.stderr.write("Actual:\n")
-        green = "\033[32m" if sys.platform != "win32" else None
+        green = "\033[32m"  # if sys.platform != "win32" else None
         render_diff_range(actual_ranges, actual, colour=green)
 
         sys.stderr.write("\n")
