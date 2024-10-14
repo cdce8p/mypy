@@ -41,7 +41,7 @@ jobs:
           arch: x64
           os: windows-latest
           toxenv: py38
-          color: false
+          color: 0
           tox_extra_args: "-n 0 mypy/test/testpythoneval.py::PythonEvaluationSuite::pythoneval.test::testDataclassReplace"
         - name: Test suite with py39-ubuntu
           python: '3.9'
@@ -128,7 +128,7 @@ jobs:
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
       # Rich (pip)
-      FORCE_COLOR: 0
+      FORCE_COLOR: ${{ matrix.color || 1 }}
       # Tox
       PY_COLORS: 1
       # Mypy (see https://github.com/python/mypy/issues/7771)
