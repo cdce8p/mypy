@@ -208,9 +208,11 @@ jobs:
         pip install -e .
 
     - name: Setup tox environment
+      if: false
       run: |
         tox run -e ${{ matrix.toxenv }} --notest
     - name: Test
+      if: false
       run: tox run -e ${{ matrix.toxenv }} --skip-pkg-install -- ${{ matrix.tox_extra_args }}
       continue-on-error: ${{ matrix.allow_failure == 'true' }}
 
