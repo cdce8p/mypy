@@ -41,7 +41,7 @@ jobs:
           arch: x64
           os: windows-latest
           toxenv: py38
-          color: false
+          no_color: true
           tox_extra_args: "-n 0 mypy/test/testpythoneval.py::PythonEvaluationSuite::pythoneval.test::testDataclassReplace"
         - name: Test suite with py39-ubuntu
           python: '3.9'
@@ -141,9 +141,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - run: |
-        echo "matrix.color: ${{ matrix.color }}"
-        echo "matrix.color != 'false': ${{ !matrix.color }}"
-        echo "matrix.color != 'false' && 1 || 0: ${{ !matrix.color && 1 || '0' }}"
+        echo "matrix.no_color: ${{ matrix.no_color }}"
+        echo "!matrix.no_color': ${{ !matrix.no_color }}"
+        echo "!matrix.no_color && 1 || 0: ${{ !matrix.no_color && 1 || 0 }}"
 
     - name: Debug build
       if: ${{ matrix.debug_build }}
