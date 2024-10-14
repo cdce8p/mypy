@@ -128,7 +128,7 @@ jobs:
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
       # Rich (pip)
-      FORCE_COLOR: ${{ matrix.color || 1 }}
+      FORCE_COLOR: ${{ !matrix.color && 1 || 0 }}
       # Tox
       PY_COLORS: 1
       # Mypy (see https://github.com/python/mypy/issues/7771)
@@ -142,8 +142,8 @@ jobs:
     - uses: actions/checkout@v4
     - run: |
         echo "matrix.color: ${{ matrix.color }}"
-        echo "matrix.color != 'false': ${{ matrix.color != 'false' }}"
-        echo "matrix.color != 'false' && 1 || 0: ${{ matrix.color != 'false' && '1' || '0' }}"
+        echo "matrix.color != 'false': ${{ !matrix.color }}"
+        echo "matrix.color != 'false' && 1 || 0: ${{ !matrix.color && 1 || '0' }}"
 
     - name: Debug build
       if: ${{ matrix.debug_build }}
