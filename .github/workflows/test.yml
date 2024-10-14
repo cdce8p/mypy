@@ -192,11 +192,17 @@ jobs:
         echo os.sched_getaffinity; python -c 'import os; print(len(getattr(os, "sched_getaffinity", lambda *args: [])(0)))'
         pip install setuptools==68.2.2 tox==4.11.0
 
-    - name: Compiled with mypyc
-      if: ${{ matrix.test_mypyc }}
+    - name: Compiled with mypyc (ubuntu)
+      if: matrix.test_mypyc == 'true' && matrix.os == 'ubuntu-latest'
       run: |
         pip install -r test-requirements.txt
         CC=clang MYPYC_OPT_LEVEL=0 MYPY_USE_MYPYC=1 pip install -e .
+
+    - name: Compiled with mypyc (win)
+      if: matrix.test_mypyc == 'true' && matrix.os == 'windows-latest'
+      run: |
+        pip install -r test-requirements.txt
+        MYPYC_OPT_LEVEL=0 MYPY_USE_MYPYC=1 pip install -e .
 
     - name: Setup tox environment
       run: |
