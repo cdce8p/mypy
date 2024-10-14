@@ -139,16 +139,16 @@ jobs:
       PYTEST_ADDOPTS: --color=yes
 
     steps:
-    - uses: actions/checkout@v4
     - run: |
         echo "x: ${{ startsWith(matrix.os, 'windows-') }}"
         echo "y: ${{ matrix.toxenv == 'py' }}"
         echo "xy: ${{ startsWith(matrix.os, 'windows-') && matrix.toxenv == 'py' }}"
-        echo "!xy: ${{ !(startsWith(matrix.os, 'windows-') && matrix.toxenv == 'py') }}
+        echo "!xy: ${{ !(startsWith(matrix.os, 'windows-') && matrix.toxenv == 'py') }}"
         echo "---"
         echo "matrix.no_color: ${{ matrix.no_color }}"
         echo "!matrix.no_color': ${{ !matrix.no_color }}"
         echo "!matrix.no_color && 1 || 0: ${{ !matrix.no_color && 1 || 0 }}"
+    - uses: actions/checkout@v4
 
     - name: Debug build
       if: ${{ matrix.debug_build }}
