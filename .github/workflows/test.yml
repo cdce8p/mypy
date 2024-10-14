@@ -128,7 +128,7 @@ jobs:
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
       # Rich (pip)
-      FORCE_COLOR: ${{ !(startsWith(matrix.os, 'windows-') && matrix.toxenv == 'py') && 1 || 0 }}
+      FORCE_COLOR: ${{ !(startsWith(matrix.os, 'windows-') && startsWith(matrix.toxenv, 'py')) && 1 || 0 }}
       # Tox
       PY_COLORS: 1
       # Mypy (see https://github.com/python/mypy/issues/7771)
@@ -141,9 +141,9 @@ jobs:
     steps:
     - run: |
         echo "x: ${{ startsWith(matrix.os, 'windows-') }}"
-        echo "y: ${{ matrix.toxenv == 'py' }}"
-        echo "xy: ${{ startsWith(matrix.os, 'windows-') && matrix.toxenv == 'py' }}"
-        echo "!xy: ${{ !(startsWith(matrix.os, 'windows-') && matrix.toxenv == 'py') }}"
+        echo "y: ${{ startsWith(matrix.toxenv, 'py') }}"
+        echo "xy: ${{ startsWith(matrix.os, 'windows-') && startsWith(matrix.toxenv, 'py') }}"
+        echo "!xy: ${{ !(startsWith(matrix.os, 'windows-') && startsWith(matrix.toxenv, 'py')) }}"
         echo "---"
         echo "matrix.no_color: ${{ matrix.no_color }}"
         echo "!matrix.no_color': ${{ !matrix.no_color }}"
