@@ -128,7 +128,7 @@ jobs:
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
       # Rich (pip)
-      FORCE_COLOR: ${{ matrix.color != 'false' && 1 || 0 }}
+      FORCE_COLOR: 0
       # Tox
       PY_COLORS: 1
       # Mypy (see https://github.com/python/mypy/issues/7771)
