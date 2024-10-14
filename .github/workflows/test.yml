@@ -142,7 +142,7 @@ jobs:
     - uses: actions/checkout@v4
     - run: |
         echo "matrix.color: ${{ matrix.color }}"
-        echo "matrix.color != 'false' && 1 || 0: ${{ matrix.color != 'false' && 1 || 0 }}"
+        echo "matrix.color != 'false' && 1 || 0: ${{ matrix.color != 'false' && '1' || '0' }}"
 
     - name: Debug build
       if: ${{ matrix.debug_build }}
