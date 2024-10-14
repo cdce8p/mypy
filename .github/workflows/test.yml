@@ -181,7 +181,7 @@ jobs:
         echo debug build; python -c 'import sysconfig; print(bool(sysconfig.get_config_var("Py_DEBUG")))'
         echo os.cpu_count; python -c 'import os; print(os.cpu_count())'
         echo os.sched_getaffinity; python -c 'import os; print(len(getattr(os, "sched_getaffinity", lambda *args: [])(0)))'
-        pip install setuptools==68.2.2 tox==4.13.0
+        pip install setuptools==68.2.2 tox==4.14.0
 
     - name: Compiled with mypyc
       if: ${{ matrix.test_mypyc }}
