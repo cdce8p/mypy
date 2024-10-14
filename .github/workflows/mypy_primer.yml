@@ -4,6 +4,7 @@ on:
   # Only run on PR, since we diff against master
   pull_request:
     paths-ignore:
+    - '.github/**'
     - 'docs/**'
     - '**/*.rst'
     - '**/*.md'
