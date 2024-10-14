@@ -200,10 +200,11 @@ jobs:
 
     - name: Compiled with mypyc (win)
       if: ${{ matrix.os == 'windows-latest' }}
+      env:
+        MYPYC_OPT_LEVEL: 0
+        MYPY_USE_MYPYC: 1
       run: |
         pip install -r test-requirements.txt
-        set MYPYC_OPT_LEVEL=0
-        set MYPY_USE_MYPYC=1
         pip install -e .
 
     - name: Setup tox environment
