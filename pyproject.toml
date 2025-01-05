@@ -79,7 +79,7 @@ mypyc = "mypyc.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["mypy*", "mypyc*", "*__mypyc*"]
-exclude = ["mypyc.test-data*"]
+exclude = ["mypy.test*", "mypyc.test*", "mypyc.test-data*"]
 namespaces = false
 
 [tool.setuptools.package-data]
@@ -93,12 +93,16 @@ mypy = [
   "xml/*.css",
 ]
 [tool.setuptools.exclude-package-data]
+mypy = [
+    "test/**",  # "test/[!v]**",  # TODO exclude everything except "visitor.py" - is that file necessary?
+]
 mypyc = [
   "README.md",
   "doc/**",
   "external/**",
   "lib-rt/test_capi.cc",
   "lib-rt/setup.py",
+  "test/**",
   "test-data/**",
 ]
 
