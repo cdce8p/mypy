@@ -158,6 +158,18 @@ from typedpkg_ns import a
 [out]
 [out2]
 
+[case testPyTypedRemoved]
+# pkgs2: typedpkg; typedpkg_no_typed
+import typedpkg
+-- dummy should trigger a second iteration
+[file dummy.py.2]
+[out]
+[out2]
+-- TODO mypy should not emit errors here
+testPyTypedRemoved.py:2: error: Skipping analyzing "typedpkg": module is installed, but missing library stubs or py.typed marker
+testPyTypedRemoved.py:2: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+[out3]
+
 [case testNamespacePkgWStubs]
 # pkgs: typedpkg_ns_a, typedpkg_ns_b, typedpkg_ns_b-stubs
 # flags: --no-namespace-packages

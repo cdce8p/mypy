@@ -98,7 +98,7 @@ def test_pep561(testcase: DataDrivenTestCase) -> None:
     python = sys.executable
 
     assert python is not None, "Should be impossible"
-    pkgs, pip_args = parse_pkgs(testcase.input[0])
+    pkgs, pkgs2, pip_args = parse_pkgs(testcase.input[0])
     mypy_args = parse_mypy_args(testcase.input[1])
     editable = False
     for arg in pip_args:
@@ -133,6 +133,10 @@ def test_pep561(testcase: DataDrivenTestCase) -> None:
             steps = [[]] + steps
 
         for i, operations in enumerate(steps):
+            if i == 1 and pkgs2:
+                for pkg in pkgs2:
+                    install_package(pkg, python_executable, editable)
+
             perform_file_operations(operations)
 
             output = []
@@ -160,12 +164,19 @@ def test_pep561(testcase: DataDrivenTestCase) -> None:
             os.remove(program)
 
 
-def parse_pkgs(comment: str) -> tuple[list[str], list[str]]:
-    if not comment.startswith("# pkgs:"):
-        return ([], [])
+def parse_pkgs(comment: str) -> tuple[list[str], list[str], list[str]]:
+    if not comment.startswith(("# pkgs:", "# pkgs2:")):
+        return ([], [], [])
+    if comment.startswith("# pkgs2:"):
+        pkgs_str, pkgs2_str, *args = comment.removeprefix("# pkgs2:").split(";")
+        return (
+            [pkg.strip() for pkg in pkgs_str.split(",")],
+            [pkg.strip() for pkg in pkgs2_str.split(",")],
+            [arg.strip() for arg in args],
+        )
     else:
         pkgs_str, *args = comment[7:].split(";")
-        return ([pkg.strip() for pkg in pkgs_str.split(",")], [arg.strip() for arg in args])
+        return ([pkg.strip() for pkg in pkgs_str.split(",")], [], [arg.strip() for arg in args])
 
 
 def parse_mypy_args(line: str) -> list[str]:
