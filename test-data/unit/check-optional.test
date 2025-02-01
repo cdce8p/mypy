@@ -725,9 +725,9 @@ def g(x: Optional[int]) -> int:
         reveal_type(x)  # N: Revealed type is "None"
         # As a special case for Unions containing None, during
         x = f()
-        reveal_type(x)  # N: Revealed type is "Union[builtins.int, Any]"
-    reveal_type(x)  # N: Revealed type is "Union[builtins.int, Any]"
-    return x
+        reveal_type(x)  # N: Revealed type is "Union[builtins.int, None]"
+    reveal_type(x)  # N: Revealed type is "Union[builtins.int, None]"
+    return x  # E: Incompatible return value type (got "Optional[int]", expected "int")
 [builtins fixtures/bool.pyi]
 
 [case testOptionalAssignAny2]
@@ -742,9 +742,9 @@ def g(x: Optional[int]) -> int:
         reveal_type(x)  # N: Revealed type is "builtins.int"
         # Same as above, even after we've assigned to x
         x = f()
-        reveal_type(x)  # N: Revealed type is "Union[builtins.int, Any]"
-    reveal_type(x)  # N: Revealed type is "Union[builtins.int, Any]"
-    return x
+        reveal_type(x)  # N: Revealed type is "Union[builtins.int, None]"
+    reveal_type(x)  # N: Revealed type is "Union[builtins.int, None]"
+    return x  # E: Incompatible return value type (got "Optional[int]", expected "int")
 [builtins fixtures/bool.pyi]
 
 [case testOptionalAssignAny3]
@@ -757,8 +757,8 @@ def g(x: Optional[int]) -> int:
         return x
     reveal_type(x)  # N: Revealed type is "None"
     x = f()
-    reveal_type(x)  # N: Revealed type is "Union[builtins.int, Any]"
-    return x
+    reveal_type(x)  # N: Revealed type is "Union[builtins.int, None]"
+    return x  # E: Incompatible return value type (got "Optional[int]", expected "int")
 [builtins fixtures/bool.pyi]
 
 [case testStrictOptionalCovarianceCrossModule]

@@ -391,6 +391,7 @@ class CapturableArgumentParser(argparse.ArgumentParser):
         if message:
             if file is None:
                 file = self.stderr
+                assert file is not None
             file.write(message)
 
     # ===============

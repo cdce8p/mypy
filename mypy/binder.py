@@ -14,7 +14,6 @@ from mypy.typeops import make_simplified_union
 from mypy.types import (
     AnyType,
     Instance,
-    NoneType,
     PartialType,
     ProperType,
     TupleType,
@@ -373,22 +372,22 @@ class ConditionalTypeBinder:
                 # First case: a local/global variable without explicit annotation,
                 # in this case we just assign Any (essentially following the SSA logic).
                 self.put(expr, type)
-            elif isinstance(p_declared, UnionType) and any(
-                isinstance(get_proper_type(item), NoneType) for item in p_declared.items
-            ):
-                # Second case: explicit optional type, in this case we optimize for a common
-                # pattern when an untyped value used as a fallback replacing None.
-                new_items = [
-                    type if isinstance(get_proper_type(item), NoneType) else item
-                    for item in p_declared.items
-                ]
-                self.put(expr, UnionType(new_items))
-            elif isinstance(p_declared, UnionType) and any(
-                isinstance(get_proper_type(item), AnyType) for item in p_declared.items
-            ):
-                # Third case: a union already containing Any (most likely from an un-imported
-                # name), in this case we allow assigning Any as well.
-                self.put(expr, type)
+            # elif isinstance(p_declared, UnionType) and any(
+            #     isinstance(get_proper_type(item), NoneType) for item in p_declared.items
+            # ):
+            #     # Second case: explicit optional type, in this case we optimize for a common
+            #     # pattern when an untyped value used as a fallback replacing None.
+            #     new_items = [
+            #         type if isinstance(get_proper_type(item), NoneType) else item
+            #         for item in p_declared.items
+            #     ]
+            #     self.put(expr, UnionType(new_items))
+            # elif isinstance(p_declared, UnionType) and any(
+            #     isinstance(get_proper_type(item), AnyType) for item in p_declared.items
+            # ):
+            #     # Third case: a union already containing Any (most likely from an un-imported
+            #     # name), in this case we allow assigning Any as well.
+            #     self.put(expr, type)
             else:
                 # In all other cases we don't narrow to Any to minimize false negatives.
                 self.put(expr, declared_type)
