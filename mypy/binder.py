@@ -385,12 +385,12 @@ class ConditionalTypeBinder:
                     for item in p_declared.items
                 ]
                 self.put(expr, UnionType(new_items))
-            # elif isinstance(p_declared, UnionType) and any(
-            #     isinstance(get_proper_type(item), AnyType) for item in p_declared.items
-            # ):
-            #     # Third case: a union already containing Any (most likely from an un-imported
-            #     # name), in this case we allow assigning Any as well.
-            #     self.put(expr, type)
+            elif isinstance(p_declared, UnionType) and any(
+                isinstance(get_proper_type(item), AnyType) for item in p_declared.items
+            ):
+                # Third case: a union already containing Any (most likely from an un-imported
+                # name), in this case we allow assigning Any as well.
+                self.put(expr, type)
             else:
                 # In all other cases we don't narrow to Any to minimize false negatives.
                 self.put(expr, declared_type)
