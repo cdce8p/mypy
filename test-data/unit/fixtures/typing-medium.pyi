@@ -71,3 +71,6 @@ class ContextManager(Generic[T_co]):
 class _SpecialForm: pass
 
 TYPE_CHECKING = 1
+
+# Fallback type for all typed dicts (does not exist at runtime).
+class _TypedDict(Any): ...

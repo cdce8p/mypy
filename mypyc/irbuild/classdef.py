@@ -537,10 +537,7 @@ def make_generic_base_class(
 
 # Mypy uses these internally as base classes of TypedDict classes. These are
 # lies and don't have any runtime equivalent.
-MAGIC_TYPED_DICT_CLASSES: Final[tuple[str, ...]] = (
-    "typing._TypedDict",
-    "typing_extensions._TypedDict",
-)
+MAGIC_TYPED_DICT_CLASSES: Final[tuple[str, ...]] = ("typing._TypedDict",)
 
 
 def populate_non_ext_bases(builder: IRBuilder, cdef: ClassDef) -> Value:

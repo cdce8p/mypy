@@ -598,12 +598,7 @@ class TypedDictAnalyzer:
         line: int,
         existing_info: TypeInfo | None,
     ) -> TypeInfo:
-        # Prefer typing then typing_extensions if available.
-        fallback = (
-            self.api.named_type_or_none("typing._TypedDict", [])
-            or self.api.named_type_or_none("typing_extensions._TypedDict", [])
-            or self.api.named_type_or_none("mypy_extensions._TypedDict", [])
-        )
+        fallback = self.api.named_type_or_none("typing._TypedDict", [])
         assert fallback is not None
         info = existing_info or self.api.basic_new_typeinfo(name, fallback, line)
         typeddict_type = TypedDictType(item_types, required_keys, readonly_keys, fallback)

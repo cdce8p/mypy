@@ -132,11 +132,7 @@ TPDICT_NAMES: Final = (
 )
 
 # Supported fallback instance type names for TypedDict types.
-TPDICT_FB_NAMES: Final = (
-    "typing._TypedDict",
-    "typing_extensions._TypedDict",
-    "mypy_extensions._TypedDict",
-)
+TPDICT_FB_NAMES: Final = ("typing._TypedDict",)
 
 # Supported names of Protocol base class.
 PROTOCOL_NAMES: Final = ("typing.Protocol", "typing_extensions.Protocol")

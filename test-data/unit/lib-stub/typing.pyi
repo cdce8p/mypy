@@ -66,3 +66,5 @@ def final(meth: T) -> T: pass
 def reveal_type(__obj: T) -> T: pass
 
 class _SpecialForm: pass
+
+class _TypedDict(Any): ...
