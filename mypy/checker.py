@@ -5427,7 +5427,11 @@ class TypeChecker(NodeVisitor[None], TypeCheckerSharedApi, SplittingVisitor):
             lvalue_type = self.expr_checker.visit_member_expr(s.lvalue, True)
         else:
             lvalue_type = self.expr_checker.accept(s.lvalue)
-        inplace, method = infer_operator_assignment_method(lvalue_type, s.op)
+        if s.op == "??":
+            inplace = False
+            method = ""
+        else:
+            inplace, method = infer_operator_assignment_method(lvalue_type, s.op)
         if inplace:
             # There is __ifoo__, treat as x = x.__ifoo__(y)
             rvalue_type, _ = self.expr_checker.check_op(method, lvalue_type, s.rvalue, s)

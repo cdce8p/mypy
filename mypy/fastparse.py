@@ -175,6 +175,13 @@ else:
     ast_TemplateStr = Any
     ast_Interpolation = Any
 
+if sys.version_info >= (3, 16):
+    ast_Coalesce = ast3.Coalesce
+    ast_BoolAssign = ast3.BoolAssign
+else:
+    ast_Coalesce = Any
+    ast_BoolAssign = Any
+
 N = TypeVar("N", bound=Node)
 
 # There is no way to create reasonable fallbacks at this stage,
@@ -554,6 +561,7 @@ class ASTConverter:
         ast3.BitXor: "^",
         ast3.BitAnd: "&",
         ast3.FloorDiv: "//",
+        ast_Coalesce: "??",
     }
 
     def from_operator(self, op: ast3.operator) -> str:
@@ -1298,6 +1306,13 @@ class ASTConverter:
         )
         return self.set_line(s, n)
 
+    # BoolAssign(expr target, operator op, expr value)
+    def visit_BoolAssign(self, n: ast_BoolAssign) -> OperatorAssignmentStmt:
+        s = OperatorAssignmentStmt(
+            self.from_operator(n.op), self.visit(n.target), self.visit(n.value)
+        )
+        return self.set_line(s, n)
+
     # For(expr target, expr iter, stmt* body, stmt* orelse, string? type_comment)
     def visit_For(self, n: ast3.For) -> ForStmt:
         target_type = self.translate_type_comment(n, n.type_comment)
@@ -1483,6 +1498,8 @@ class ASTConverter:
             op = "and"
         elif isinstance(op_node, ast3.Or):
             op = "or"
+        elif isinstance(op_node, ast_Coalesce):
+            op = "??"
         else:
             raise RuntimeError("unknown BoolOp " + str(type(n)))
 

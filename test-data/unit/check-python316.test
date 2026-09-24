@@ -1,0 +1,23 @@
+[case testNoneCoalescingOperator]
+# flags: --no-native-parser
+from typing import Literal, assert_type
+a: int
+b: int | str | None
+c: Literal[3, "", False] | bytes
+d: Literal[3, "", False] | bytes | None
+
+assert_type(a ?? "", int)
+assert_type(b ?? "", int | str)
+assert_type(c ?? "", Literal[3, "", False] | bytes)
+assert_type(d ?? "", Literal[3, "", False] | bytes)
+
+[case testNoneCoalescingAssignmentOperator]
+# flags: --no-native-parser
+from typing import Literal, assert_type
+a: int
+b: int | str | None
+
+a ??= ""
+b ??= ""
+assert_type(a, int)
+assert_type(b, int | str)

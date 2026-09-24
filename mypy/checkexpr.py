@@ -3575,7 +3575,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
         if e.analyzed:
             # It's actually a type expression X | Y.
             return self.accept(e.analyzed)
-        if e.op == "and" or e.op == "or":
+        if e.op == "and" or e.op == "or" or e.op == "??":
             return self.check_boolean_op(e)
         if e.op == "*" and isinstance(e.left, ListExpr):
             # Expressions of form [...] * e get special type inference.
@@ -4398,7 +4398,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
         left_type = self.accept(e.left, ctx)
         expanded_left_type = try_expanding_sum_type_to_union(left_type, "builtins.bool")
 
-        assert e.op in ("and", "or")  # Checked by visit_op_expr
+        assert e.op in ("and", "or", "??")  # Checked by visit_op_expr
 
         left_map: mypy.checker.TypeMap
         right_map: mypy.checker.TypeMap
@@ -4410,6 +4410,27 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
             right_map, left_map = self.chk.find_isinstance_check(e.left)
         elif e.op == "or":
             left_map, right_map = self.chk.find_isinstance_check(e.left)
+        elif e.op == "??":
+            typ = get_proper_type(left_type)
+            if isinstance(typ, NoneType):
+                right_type = self.analyze_cond_branch(
+                    {}, e.right, self._combined_context(expanded_left_type)
+                )
+                return right_type
+            if isinstance(typ, UnionType):
+                items = []
+                none_found = False
+                for t in typ.items:
+                    if isinstance(get_proper_type(t), NoneType):
+                        none_found = True
+                        continue
+                    items.append(t)
+                if none_found:
+                    right_type = self.analyze_cond_branch(
+                        {}, e.right, self._combined_context(expanded_left_type)
+                    )
+                    return make_simplified_union([*items, right_type])
+            return left_type
 
         # If left_map is unreachable then we know mypy considers the left expression
         # to be redundant.

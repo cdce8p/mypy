@@ -54,6 +54,8 @@ if sys.version_info < (3, 14):
     typecheck_files.remove("check-python314.test")
 if sys.version_info < (3, 15):
     typecheck_files.remove("check-python315.test")
+if sys.version_info < (3, 16):
+    typecheck_files.remove("check-python316.test")
 
 
 class TypeCheckSuite(DataSuite):
