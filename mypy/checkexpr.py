@@ -592,6 +592,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
         object_type = None
         member = None
         fullname = None
+        is_none_aware = False
         if isinstance(e.callee, RefExpr):
             # There are two special cases where plugins might act:
             # * A "static" reference/alias to a class or function;
@@ -612,6 +613,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
             ):
                 member = e.callee.name
                 object_type = self.chk.lookup_type(e.callee.expr)
+                is_none_aware = e.callee.none_aware
 
         if (
             self.chk.options.disallow_untyped_calls
@@ -630,7 +632,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
                 self.msg.untyped_function_call(callee_type, e)
 
         ret_type = self.check_call_expr_with_callee_type(
-            callee_type, e, fullname, object_type, member
+            callee_type, e, fullname, object_type, member, is_none_aware
         )
         if isinstance(e.callee, RefExpr) and len(e.args) == 2:
             if e.callee.fullname in ("builtins.isinstance", "builtins.issubclass"):
@@ -1473,6 +1475,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
         callable_name: str | None,
         object_type: Type | None,
         member: str | None = None,
+        is_none_aware: bool = False,
     ) -> Type:
         """Type check call expression.
 
@@ -1496,7 +1499,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
             )
         # Unions are special-cased to allow plugins to act on each item in the union.
         elif member is not None and isinstance(object_type, UnionType):
-            return self.check_union_call_expr(e, object_type, member)
+            return self.check_union_call_expr(e, object_type, member, is_none_aware)
         ret_type, callee_type = self.check_call(
             callee_type,
             e.args,
@@ -1516,11 +1519,16 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
                 e.callee.type_is = proper_callee.type_is
         return ret_type
 
-    def check_union_call_expr(self, e: CallExpr, object_type: UnionType, member: str) -> Type:
+    def check_union_call_expr(
+        self, e: CallExpr, object_type: UnionType, member: str, is_none_aware: bool = False
+    ) -> Type:
         """Type check calling a member expression where the base type is a union."""
         res: list[Type] = []
         for typ in flatten_nested_unions(object_type.relevant_items()):
             # Member access errors are already reported when visiting the member expression.
+            if is_none_aware and isinstance(get_proper_type(typ), NoneType):
+                res.append(typ)
+                continue
             with self.msg.filter_errors():
                 item = analyze_member_access(
                     member,
@@ -3461,6 +3469,14 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
             else:
                 is_self = False
 
+            if not e.none_aware:
+                if isinstance(base, MemberExpr):
+                    e.none_aware = base.none_aware
+                elif isinstance(base, CallExpr) and isinstance(base.callee, MemberExpr):
+                    e.none_aware = base.callee.none_aware
+                elif isinstance(base, IndexExpr) and isinstance(base.base, MemberExpr):
+                    e.none_aware = base.base.none_aware
+
             member_type = analyze_member_access(
                 e.name,
                 original_type,
@@ -3474,6 +3490,7 @@ class ExpressionChecker(ExpressionVisitor[Type], ExpressionCheckerSharedApi):
                 module_symbol_table=module_symbol_table,
                 is_self=is_self,
                 rvalue=rvalue,
+                is_none_aware=e.none_aware,
             )
 
             return member_type

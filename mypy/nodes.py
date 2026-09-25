@@ -2464,7 +2464,7 @@ class NameExpr(RefExpr):
 class MemberExpr(RefExpr):
     """Member access expression x.y"""
 
-    __slots__ = ("expr", "name", "def_var")
+    __slots__ = ("expr", "name", "def_var", "none_aware")
 
     __match_args__ = ("expr", "name", "node")
 
@@ -2475,6 +2475,7 @@ class MemberExpr(RefExpr):
         # The variable node related to a definition through 'self.x = <initializer>'.
         # The nodes of other kinds of member expressions are resolved during type checking.
         self.def_var: Var | None = None
+        self.none_aware: bool = False
 
     def accept(self, visitor: ExpressionVisitor[T]) -> T:
         return visitor.visit_member_expr(self)
@@ -2594,7 +2595,7 @@ class IndexExpr(Expression):
     Also wraps type application such as List[int] as a special form.
     """
 
-    __slots__ = ("base", "index", "method_type", "analyzed", "as_type")
+    __slots__ = ("base", "index", "method_type", "analyzed", "as_type", "none_aware")
 
     __match_args__ = ("base", "index")
 
@@ -2609,6 +2610,7 @@ class IndexExpr(Expression):
     # represents the type denoted by the type expression.
     # None means "is not a type expression".
     as_type: NotParsed | mypy.types.Type | None
+    none_aware: bool
 
     def __init__(self, base: Expression, index: Expression) -> None:
         super().__init__()
@@ -2617,6 +2619,7 @@ class IndexExpr(Expression):
         self.method_type = None
         self.analyzed = None
         self.as_type = NotParsed.VALUE
+        self.none_aware = False
 
     def accept(self, visitor: ExpressionVisitor[T]) -> T:
         return visitor.visit_index_expr(self)

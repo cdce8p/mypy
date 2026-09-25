@@ -178,9 +178,13 @@ else:
 if sys.version_info >= (3, 16):
     ast_Coalesce = ast3.Coalesce
     ast_BoolAssign = ast3.BoolAssign
+    ast_NoneAwareAttribute = ast3.NoneAwareAttribute
+    ast_NoneAwareSubscript = ast3.NoneAwareSubscript
 else:
     ast_Coalesce = Any
     ast_BoolAssign = Any
+    ast_NoneAwareAttribute = Any
+    ast_NoneAwareSubscript = Any
 
 N = TypeVar("N", bound=Node)
 
@@ -1747,9 +1751,22 @@ class ASTConverter:
             e = member_expr
         return self.set_line(e, n)
 
+    # NoneAwareAttribute(expr value, identifier attr)
+    def visit_NoneAwareAttribute(self, n: ast_NoneAwareAttribute) -> MemberExpr:
+        value = n.value
+        e = MemberExpr(self.visit(value), n.attr)
+        e.none_aware = True
+        return self.set_line(e, n)
+
     # Subscript(expr value, slice slice, expr_context ctx)
     def visit_Subscript(self, n: ast3.Subscript) -> IndexExpr:
         e = IndexExpr(self.visit(n.value), self.visit(n.slice))
+        return self.set_line(e, n)
+
+    # NoneAwareSubscript(expr value, slice slice)
+    def visit_NoneAwareSubscript(self, n: ast_NoneAwareSubscript) -> IndexExpr:
+        e = IndexExpr(self.visit(n.value), self.visit(n.slice))
+        e.none_aware = True
         return self.set_line(e, n)
 
     # Starred(expr value, expr_context ctx)

@@ -101,6 +101,7 @@ class MemberContext:
         rvalue: Expression | None = None,
         suppress_errors: bool = False,
         preserve_type_var_ids: bool = False,
+        is_none_aware: bool = False,
     ) -> None:
         self.is_lvalue = is_lvalue
         self.is_super = is_super
@@ -121,6 +122,7 @@ class MemberContext:
         # It is needed to avoid infinite recursion in cases involving self-referential
         # generic methods, see find_member() for details. Do not use for other purposes!
         self.preserve_type_var_ids = preserve_type_var_ids
+        self.is_none_aware = is_none_aware
 
     def named_type(self, name: str) -> Instance:
         return self.chk.named_type(name)
@@ -138,6 +140,7 @@ class MemberContext:
         self_type: Type | None = None,
         is_lvalue: bool | None = None,
         original_type: Type | None = None,
+        is_none_aware: bool | None = None,
     ) -> MemberContext:
         mx = MemberContext(
             is_lvalue=self.is_lvalue,
@@ -152,6 +155,7 @@ class MemberContext:
             rvalue=self.rvalue,
             suppress_errors=self.suppress_errors,
             preserve_type_var_ids=self.preserve_type_var_ids,
+            is_none_aware=self.is_none_aware,
         )
         if self_type is not None:
             mx.self_type = self_type
@@ -159,6 +163,8 @@ class MemberContext:
             mx.is_lvalue = is_lvalue
         if original_type is not None:
             mx.original_type = original_type
+        if is_none_aware is not None:
+            mx.is_none_aware = is_none_aware
         return mx
 
 
@@ -180,6 +186,7 @@ def analyze_member_access(
     is_self: bool = False,
     rvalue: Expression | None = None,
     suppress_errors: bool = False,
+    is_none_aware: bool = False,
 ) -> Type:
     """Return the type of attribute 'name' of 'typ'.
 
@@ -225,6 +232,7 @@ def analyze_member_access(
         is_self=is_self,
         rvalue=rvalue,
         suppress_errors=suppress_errors,
+        is_none_aware=is_none_aware,
     )
     result = _analyze_member_access(name, typ, mx, override_info)
     possible_literal = get_proper_type(result)
@@ -498,6 +506,9 @@ def analyze_union_member_access(name: str, typ: UnionType, mx: MemberContext) ->
     with mx.msg.disable_type_names():
         results = []
         for subtype in typ.relevant_items():
+            if mx.is_none_aware and isinstance(get_proper_type(subtype), NoneType):
+                results.append(subtype)
+                continue
             # Self types should be bound to every individual item of a union.
             item_mx = mx.copy_modified(self_type=subtype)
             results.append(_analyze_member_access(name, subtype, item_mx))

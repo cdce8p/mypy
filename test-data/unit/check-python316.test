@@ -21,3 +21,58 @@ a ??= ""
 b ??= ""
 assert_type(a, int)
 assert_type(b, int | str)
+
+[case testNoneAwareAccessOperator]
+# flags: --no-native-parser
+from typing import assert_type
+
+class A:
+    b = None
+    c = 1
+    d = [3, 4]
+    def func_a(self): return "Hello"
+
+class B:
+    a: A
+    b: A | None
+    c = 2
+    d = [1, 2]
+    def func_b(self): return "World"
+    def func_c(self, x):
+        return [1, x]
+
+def func(x):
+    return [1, x]
+
+k: B | None
+l: B
+
+assert_type(k?.a, A | None)
+assert_type(k?.a.c, int | None)
+assert_type(l?.c, int)
+assert_type(l?.a.c, int)
+assert_type(l.a?.c, int)
+assert_type(l?.a?.c, int)
+assert_type(l.b?.c, int | None)
+assert_type(l?.b?.c, int | None)
+
+[case testNoneAwareSubscriptOperator]
+# flags: --no-native-parser
+from typing import assert_type
+class A:
+    b = None
+    c = 1
+    d = [3, 4]
+    def func_a(self): return "Hello"
+
+class B:
+    a: A
+    b: A | None = None
+    c = 2
+    d = [1, 2]
+    def func_b(self): return "World"
+
+k: list[B] | None
+l: list[B]
+
+assert_type(k?[0], B | None)  # TODO
