@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Final, Literal, TypedDict
-from typing_extensions import NotRequired
+from typing import Any, Final, Literal, NotRequired, TypedDict
 
 from mypy.nodes import (
     ARG_NAMED,

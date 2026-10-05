@@ -16,8 +16,7 @@ from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from select import select
 from types import TracebackType
-from typing import Final
-from typing_extensions import Self
+from typing import Final, Self
 
 from librt.base64 import urlsafe_b64encode
 from librt.internal import ReadBuffer, WriteBuffer

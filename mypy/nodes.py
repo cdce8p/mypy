@@ -12,6 +12,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    NotRequired,
     Optional,
     TypeAlias as _TypeAlias,
     TypedDict,
@@ -20,7 +21,6 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import NotRequired
 
 from librt.internal import (
     extract_symbol,

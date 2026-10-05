@@ -6,16 +6,10 @@ import glob as fileglob
 import os
 import re
 import sys
-from io import StringIO
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
-
+import tomllib
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
-from typing import Any, Final, TextIO, TypeAlias
-from typing_extensions import Never
+from io import StringIO
+from typing import Any, Final, Never, TextIO, TypeAlias
 
 from mypy import defaults
 from mypy.options import PER_MODULE_OPTIONS, Options

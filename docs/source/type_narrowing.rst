@@ -268,7 +268,7 @@ Generic TypeGuards
 
 .. code-block:: python
 
-  from typing import TypeGuard  # use `typing_extensions` for `python<3.10`
+  from typing import TypeGuard
 
   def is_two_element_tuple[T](val: tuple[T, ...]) -> TypeGuard[tuple[T, T]]:
       return len(val) == 2
@@ -286,7 +286,7 @@ Type guard functions can accept extra arguments (Python 3.12 syntax):
 
 .. code-block:: python
 
-  from typing import TypeGuard  # use `typing_extensions` for `python<3.10`
+  from typing import TypeGuard
 
   def is_set_of[T](val: set[Any], type: type[T]) -> TypeGuard[set[T]]:
       return all(isinstance(x, type) for x in val)
@@ -343,7 +343,7 @@ with `:= operator <https://docs.python.org/3/whatsnew/3.8.html#assignment-expres
 
 .. code-block:: python
 
-  from typing import TypeGuard  # use `typing_extensions` for `python<3.10`
+  from typing import TypeGuard
 
   def is_float(a: object) -> TypeGuard[float]:
       return isinstance(a, float)

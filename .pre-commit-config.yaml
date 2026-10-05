@@ -6,7 +6,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: ea488cebbfd88a5f50b8bd95d5c829d0bb76feb8  # frozen: 26.1.0
+    rev: 96ae3e5802f3fe2d551e703e18f0a367d1a81ac2  # frozen: 26.10.0
     hooks:
       - id: black
         exclude: '^(test-data/)'

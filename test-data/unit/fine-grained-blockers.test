@@ -125,11 +125,6 @@ class C:
 a.py:1: error: Simple statements must be separated by newlines or semicolons
 ==
 main:5: error: Missing positional argument "x" in call to "f" of "C"
-[out version==3.10.0]
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-main:5: error: Missing positional argument "x" in call to "f" of "C"
 
 [case testAddFileWithBlockingError]
 import a
@@ -139,13 +134,6 @@ x x
 [file a.py.3]
 def f() -> None: pass
 [out]
-main:1: error: Cannot find implementation or library stub for module named "a"
-main:1: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-main:2: error: Too many arguments for "f"
-[out version==3.10.0]
 main:1: error: Cannot find implementation or library stub for module named "a"
 main:1: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
 ==
@@ -228,13 +216,6 @@ a.py:1: error: Simple statements must be separated by newlines or semicolons
 a.py:1: error: Simple statements must be separated by newlines or semicolons
 ==
 a.py:2: error: Missing positional argument "x" in call to "f"
-[out version==3.10.0]
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-a.py:2: error: Missing positional argument "x" in call to "f"
 
 [case testModifyTwoFilesIntroduceTwoBlockingErrors]
 import a
@@ -299,13 +280,6 @@ a.py:1: error: Simple statements must be separated by newlines or semicolons
 main:1: error: Cannot find implementation or library stub for module named "a"
 main:1: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
 b.py:1: error: Cannot find implementation or library stub for module named "a"
-[out version==3.10.0]
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-main:1: error: Cannot find implementation or library stub for module named "a"
-main:1: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
-b.py:1: error: Cannot find implementation or library stub for module named "a"
 
 [case testDeleteFileWithBlockingError2-only_when_cache]
 -- Different cache/no-cache tests because:
@@ -321,13 +295,6 @@ a.f()
 x x
 [delete a.py.3]
 [out]
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-b.py:1: error: Cannot find implementation or library stub for module named "a"
-b.py:1: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
-main:1: error: Cannot find implementation or library stub for module named "a"
-[out version==3.10.0]
 ==
 a.py:1: error: Simple statements must be separated by newlines or semicolons
 ==
@@ -357,14 +324,6 @@ a.py:1: error: Simple statements must be separated by newlines or semicolons
 ==
 b.py:2: error: Module has no attribute "f"
 b.py:3: error: "int" not callable
-[out version==3.10.0]
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-b.py:2: error: Module has no attribute "f"
-b.py:3: error: "int" not callable
 
 [case testImportBringsAnotherFileWithBlockingError1]
 import a
@@ -376,11 +335,6 @@ import blocker
 1()
 def f() -> None: pass
 [out]
-==
-<ROOT>/test-data/unit/lib-stub/blocker.pyi:2: error: Simple statements must be separated by newlines or semicolons
-==
-a.py:1: error: "int" not callable
-[out version==3.10.0]
 ==
 <ROOT>/test-data/unit/lib-stub/blocker.pyi:2: error: Simple statements must be separated by newlines or semicolons
 ==
@@ -459,13 +413,6 @@ a.py:1: error: Simple statements must be separated by newlines or semicolons
 <ROOT>/test-data/unit/lib-stub/blocker.pyi:2: error: Simple statements must be separated by newlines or semicolons
 ==
 a.py:2: error: "int" not callable
-[out version==3.10.0]
-==
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-<ROOT>/test-data/unit/lib-stub/blocker.pyi:2: error: Simple statements must be separated by newlines or semicolons
-==
-a.py:2: error: "int" not callable
 
 [case testInitialBlocker]
 # cmd: mypy a.py b.py
@@ -480,11 +427,6 @@ x = 1
 def f() -> int:
     return 0
 [out]
-a.py:1: error: Simple statements must be separated by newlines or semicolons
-==
-b.py:2: error: Incompatible return value type (got "str", expected "int")
-==
-[out version==3.10.0]
 a.py:1: error: Simple statements must be separated by newlines or semicolons
 ==
 b.py:2: error: Incompatible return value type (got "str", expected "int")

@@ -53,8 +53,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Collection, Iterable, Iterator
 from contextlib import contextmanager
-from typing import Any, Final, TypeAlias as _TypeAlias, TypeGuard, TypeVar, cast
-from typing_extensions import assert_never
+from typing import Any, Final, TypeAlias as _TypeAlias, TypeGuard, TypeVar, assert_never, cast
 
 from mypy import errorcodes as codes, message_registry
 from mypy.constant_fold import constant_fold_expr

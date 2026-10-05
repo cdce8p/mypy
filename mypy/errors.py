@@ -6,8 +6,7 @@ import traceback
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Iterator
 from itertools import chain
-from typing import Final, Literal, NoReturn, TextIO, TypeVar
-from typing_extensions import Self
+from typing import Final, Literal, NoReturn, Self, TextIO, TypeVar
 
 from librt.internal import (
     ReadBuffer,

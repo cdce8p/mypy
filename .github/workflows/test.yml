@@ -31,30 +31,30 @@ jobs:
         include:
         # Make sure to run mypyc compiled unit tests for both
         # the oldest and newest supported Python versions
-        - name: Test suite with py310-ubuntu, mypyc-compiled
-          python: '3.10'
-          os: ubuntu-24.04-arm
-          toxenv: py
-          tox_extra_args: "-n 4"
-          test_mypyc: true
-        - name: Test suite with py311-ubuntu
+        - name: Test suite with py311-ubuntu, mypyc-compiled
           python: '3.11'
           os: ubuntu-24.04-arm
           toxenv: py
           tox_extra_args: "-n 4"
+          test_mypyc: true
         - name: Test suite with py312-ubuntu
           python: '3.12'
           os: ubuntu-24.04-arm
           toxenv: py
           tox_extra_args: "-n 4"
-        - name: Test suite with py313-ubuntu, mypyc-compiled
+        - name: Test suite with py313-ubuntu
           python: '3.13'
           os: ubuntu-24.04-arm
           toxenv: py
           tox_extra_args: "-n 4"
-          test_mypyc: true
         - name: Test suite with py314-ubuntu, mypyc-compiled
           python: '3.14'
+          os: ubuntu-24.04-arm
+          toxenv: py
+          tox_extra_args: "-n 4"
+          test_mypyc: true
+        - name: Test suite with py314t-ubuntu, mypyc-compiled
+          python: '3.14t'
           os: ubuntu-24.04-arm
           toxenv: py
           tox_extra_args: "-n 4"
@@ -65,8 +65,8 @@ jobs:
           toxenv: py
           tox_extra_args: "-n 4"
           test_mypyc: true
-        - name: Test suite with py314t-ubuntu, mypyc-compiled
-          python: '3.14t'
+        - name: Test suite with py315t-ubuntu, mypyc-compiled
+          python: '3.15t'
           os: ubuntu-24.04-arm
           toxenv: py
           tox_extra_args: "-n 4"
@@ -85,14 +85,14 @@ jobs:
         #   # allow_failure: true
         #   test_mypyc: true
 
-        - name: mypyc runtime tests with py313-macos
-          python: '3.13'
+        - name: mypyc runtime tests with py314-macos
+          python: '3.14'
           os: macos-latest
           toxenv: py
           tox_extra_args: "-n 3 mypyc/test/test_run.py mypyc/test/test_external.py"
 
-        - name: mypyc runtime tests with py310-ubuntu
-          python: '3.10'
+        - name: mypyc runtime tests with py311-ubuntu
+          python: '3.11'
           os: ubuntu-latest
           toxenv: py
           tox_extra_args: "-n 3 mypyc/test/test_run.py mypyc/test/test_external.py"
@@ -124,12 +124,12 @@ jobs:
           toxenv: py
           tox_extra_args: "-n 2 --mypy-num-workers=2 mypy/test/testcheck.py -k 'incremental or modules or classes'"
 
-        - name: Type check our own code (py310-ubuntu)
-          python: '3.10'
+        - name: Type check our own code (py311-ubuntu)
+          python: '3.11'
           os: ubuntu-latest
           toxenv: type
-        - name: Type check our own code (py310-windows-64)
-          python: '3.10'
+        - name: Type check our own code (py311-windows-64)
+          python: '3.11'
           os: windows-latest
           toxenv: type
 
@@ -137,7 +137,7 @@ jobs:
           # but it's useful to run them with tox too,
           # to ensure the tox env works as expected
         - name: Formatting and code style with Black + ruff
-          python: '3.10'
+          python: '3.11'
           os: ubuntu-latest
           toxenv: lint
 

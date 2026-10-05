@@ -51,7 +51,7 @@ hash -r  # This resets shell PATH cache, not necessary on Windows
 ```
 
 > **Note**
-> You'll need Python 3.10 or higher to install all requirements listed in
+> You'll need Python 3.11 or higher to install all requirements listed in
 > dev-requirements.txt
 
 ### Running tests

@@ -152,11 +152,6 @@ def ast3_parse(
 
 AstNode = ast3.expr | ast3.stmt | ast3.pattern | ast3.ExceptHandler
 
-if sys.version_info >= (3, 11):
-    TryStar = ast3.TryStar
-else:
-    TryStar = Any
-
 if sys.version_info >= (3, 12):
     ast_TypeAlias = ast3.TypeAlias
     ast_ParamSpec = ast3.ParamSpec
@@ -1383,7 +1378,7 @@ class ASTConverter:
         )
         return self.set_line(node, n)
 
-    def visit_TryStar(self, n: TryStar) -> TryStmt:
+    def visit_TryStar(self, n: ast3.TryStar) -> TryStmt:
         vs = [
             self.set_line(NameExpr(h.name), h) if h.name is not None else None for h in n.handlers
         ]

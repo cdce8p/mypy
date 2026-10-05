@@ -11,13 +11,13 @@ from typing import (
     Final,
     NamedTuple,
     NewType,
+    Self,
     TypeAlias as _TypeAlias,
     TypeGuard,
     TypeVar,
     cast,
     overload,
 )
-from typing_extensions import Self
 
 from librt.internal import (
     read_int as read_int_bare,

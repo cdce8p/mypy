@@ -2,26 +2,15 @@ from __future__ import annotations
 
 """Utilities to find the site and prefix information of a Python executable.
 
-This file MUST remain compatible with all Python 3.10+ versions. Since we cannot make any
+This file MUST remain compatible with all Python 3.11+ versions. Since we cannot make any
 assumptions about the Python being executed, this module should not use *any* dependencies outside
-of the standard library found in Python 3.10. This file is run each mypy run, so it should be kept
+of the standard library found in Python 3.11. This file is run each mypy run, so it should be kept
 as fast as possible.
 """
-import sys
-
-if __name__ == "__main__":
-    # HACK: We don't want to pick up mypy.types as the top-level types
-    #       module. This could happen if this file is run as a script.
-    #       This workaround fixes this for Python versions before 3.11.
-    if sys.version_info < (3, 11):
-        old_sys_path = sys.path
-        sys.path = sys.path[1:]
-        import types  # noqa: F401
-
-        sys.path = old_sys_path
 
 import os
 import site
+import sys
 import sysconfig
 
 
