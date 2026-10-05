@@ -53,7 +53,7 @@ def upgrade_pip(python_executable: str) -> None:
         # out of the box - for performance reasons.
         return
 
-    install_cmd = [python_executable, "-m", "pip", "install", "pip>=21.3.1"]
+    install_cmd = [python_executable, "-m", "pip", "install", "pip>=21.3.1"]  # type: ignore[unreachable]
     try:
         with filelock.FileLock(pip_lock, timeout=pip_timeout):
             proc = subprocess.run(install_cmd, capture_output=True, env=os.environ)
